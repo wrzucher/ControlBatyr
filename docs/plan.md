@@ -1,113 +1,116 @@
-# План ControlBatyr
+# ControlBatyr plan
 
-Состояние: 2026-11-12, до первого шага. Решения владельца помечены [Р], предложения лида — [П].
+Status: 2026-11-12, step 1 complete. [D] means decided by the owner; [P] means lead proposal.
 
-## Зачем
+## Why
 
-Образец описан в [concept.md](concept.md). Ядро бизнес-логики проектируется по нему: менеджер — API области, объектные модели, бизнес-правила,
-события, связи областей. В каждом продукте правила обсуждаются заново, и код всё равно скатывается. Библиотека
-должна удерживать форму сама — и для людей, и для ИИ-агентов. [Р]
+The pattern is described in [concept.md](concept.md), which is in Russian. The business logic core follows it:
+a manager as the domain API, object models, business rules, events, and domain connections. In each product,
+the rules are discussed again, and the code still drifts. The library should enforce the shape itself,
+for both people and AI agents. [D]
 
-Минимальная задача — **автогенерация бизнес-API**: документ собирается из ядра сам, как OpenAPI из
-контроллеров. [Р]
+The minimum task is **business API generation**: the document is generated from the core, like OpenAPI from
+controllers. [D]
 
-- Документ пересобирается **при сборке** и лежит в репозитории. На ревью pull request всегда видна актуальная
-  разница бизнес-API, из коробки. [Р]
-- Нарушено правило или документ собрать нельзя — сборка падает. [Р]
-- Подсказки в редакторе не нужны. [Р]
-- Где лежат документы, задаётся настройкой продукта: корневая папка документации. Документов может быть
-  несколько. [Р]
+- The document is regenerated **at build time** and stored in the repository. Pull request reviews always
+  show the current business API diff, out of the box. [D]
+- If a rule is broken or the document cannot be generated, the build fails. [D]
+- Editor hints are not needed. [D]
+- The library does not handle reason codes or how operations fail: that is up to the product. [D]
+- The product configures the documentation root folder. There may be several documents. [D]
 
-**Документация — продукт.** В конце мы хотим хорошую документацию: текст, решения, диаграммы и схемы. Собранное
-из ядра — её часть: написанный руками Markdown и собранный документ будут включаться друг в друга. Сейчас не
-делаем, но формат и устройство сборки выбираем так, чтобы к этому прийти. [Р]
-- В коды причин и способ отказа библиотека не лезет: это дело продукта. [Р]
+**Documentation is the product.** We want good documentation: text, decisions, diagrams, and schematics.
+Content generated from the core is part of it: handwritten Markdown and generated documents will include
+each other. We are not doing this now, but choose the format and build setup to support it later. [D]
 
-## Три уровня
+## Three levels
 
-Идём от простого к сложному. [Р]
+Start simple, then add complexity. [D]
 
-| Уровень | Что описываем | Статус |
+| Level | What we describe | Status |
 |---|---|---|
-| 1. Внешнее API ядра | методы менеджеров, объектные модели, события, связи областей | делаем первым |
-| 2. Требования | тесты, привязанные к методам менеджера; отдельный модуль | делаем вторым |
-| 3. Внутренность методов | какое событие поднимает метод, чем отказывает | не факт, что будем делать |
+| 1. External core API | manager methods, object models, events, domain connections | first |
+| 2. Requirements | tests linked to manager methods; a separate module | second |
+| 3. Method internals | which event a method raises, how it fails | may not be implemented |
 
-Внутрь методов не лезем: описываем внешнее API, как OpenAPI описывает контроллеры. Разбора исходников (Roslyn)
-нет. Библиотека читает собранную сборку отражением и берёт комментарии из файла xmldoc. [Р]
+We do not inspect method internals: we describe the external API, as OpenAPI describes controllers.
+There is no source parsing (Roslyn). The library reads the compiled assembly through reflection and takes
+comments from the xmldoc file. [D]
 
-**Роль задаёт атрибут, а не имя.** Поставил атрибут менеджера — веди себя как менеджер: библиотека описывает
-тип и следит за его правилами. Так библиотека не зависит от чужих соглашений об именах. [Р]
+**An attribute defines the role, not the name.** A type marked as a manager must follow manager rules:
+the library describes the type and checks its rules. This keeps the library independent of others' naming
+conventions. [D]
 
-| Атрибут | Что значит для библиотеки |
+| Attribute | Meaning for the library |
 |---|---|
-| менеджера | публичные методы идут в документ; действуют правила менеджера |
-| объектной модели | данные и предметные методы идут в документ; данные неизменяемы |
-| издателя событий | методы — события области, идут в документ |
-| подконтекста | в документ не идёт; следим, кто его использует |
-| `[On]` | связь областей: по этому событию — это действие |
-| `[Requirement]` | тест — требование к этому методу менеджера (уровень 2) |
+| manager | public methods go into the document; manager rules apply |
+| object model | data and domain methods go into the document; data is immutable |
+| event publisher | events are named after domain facts, such as `BetCancelled`, and go into the document; notification methods use the `Notify…` prefix |
+| subcontext | excluded from the document; we check who uses it |
+| `[On]` | domain connection: this event triggers this action |
+| `[Requirement]` | a test is a requirement for this manager method (level 2) |
 
-Точные имена атрибутов — на шаге 1, показом владельцу.
+Attribute names (step 1): `[Manager]`, `[ObjectModel]`, `[EventPublisher]`, `[Persistence]`. [D]
 
-## Состав репозитория
+## Repository layout
 
 ```
-Directory.Build.props         .NET 10, Nullable, предупреждения — ошибки
-src/ControlBatyr              на него ссылается ядро продукта: только атрибуты
-src/ControlBatyr.Inspection   чтение ядра, правила, сборка документа; запускается при сборке продукта
-tests/ControlBatyr.Tests      тесты библиотеки: маленькие «кривые ядра», на которых правило обязано упасть
-sample/Game.Model             объектные модели
-sample/Game.Persistence       подконтекст на SQLite в памяти
-sample/Game.Core              один менеджер, спецификация, издатель событий
-sample/Game.Tests             тесты-требования и тест «документ собран и не устарел»
-sample/docs/                  собранная документация примера; лежит в репозитории, чтобы её читать
-.github/workflows/ci.yml      сборка и тесты
+Directory.Build.props         .NET 10, Nullable, warnings as errors
+src/ControlBatyr              referenced by the product core: attributes only
+src/ControlBatyr.Inspection   core inspection, rules, document generation; runs during the product build
+tests/ControlBatyr.Tests      library tests: small invalid cores on which a rule must fail
+sample/Game.Model             object models
+sample/Game.Persistence       subcontext using in-memory SQLite
+sample/Game.Core              one manager, specification, event publisher
+sample/Game.Tests             requirement tests and a test that the document is generated and up to date
+sample/docs/                  generated example documentation; stored in the repository for reading
+.github/workflows/ci.yml      build and tests
 ```
 
-Пример — выдуманная игра со ставками: одна область, 2–3 метода менеджера. Это язык примера, саму игру не
-проектируем.
+The example is a fictional betting game: one domain, 2–3 manager methods. This is the example's vocabulary;
+we are not designing the game itself.
 
-## Шаги
+## Steps
 
-Каждый шаг — отдельный pull request. После каждого — показ владельцу и решение, идём ли дальше.
+Each step is a separate pull request. After each step, show it to the owner, who decides whether to continue.
 
-| № | Что делаем | Готово, когда |
+| No. | What we do | Done when |
 |---|---|---|
-| 1 | Пример по образцу и атрибуты ролей | Сборка и тесты зелёные; метод менеджера читается как текст; каждый тест — требование |
-| 2 | Документ уровня 1: методы, объекты, события. Пока запускается тестом | документ в `sample/docs/` собран; владелец прочитал и сказал, годится ли вид |
-| 3 | Документ пересобирается при сборке; папка документации — из настройки | `dotnet build` примера обновляет документ в заданной папке; CI падает, если в репозитории лежит устаревший |
-| 4 | Правила по форме (ниже) | На примере нарушений нет; на каждое правило есть «кривое ядро», где сборка падает с понятным сообщением |
-| 5 | Вторая область и связи `[On]`; связи в документе | Связь работает в тесте и видна в документе строкой «событие → действие» |
-| 6 | Уровень 2: модуль требований, `[Requirement]` | Требования видны в документе под своим методом |
-| 7 | Решения по итогам: пакет NuGet, проба на настоящем продукте | — |
+| 1 (done) | Example following the pattern and role attributes | Build and tests pass; a manager method reads like text; every test is a requirement |
+| 2 | Level 1 document: methods, objects, events. Run by a test for now | The document in `sample/docs/` is generated; the owner has read it and judged the presentation |
+| 3 | Regenerate the document during the build; configure the documentation folder | `dotnet build` of the example updates the document in the configured folder; CI fails if the repository copy is stale |
+| 4 | Shape rules (below) | The example has no violations; each rule has an invalid core where the build fails with a clear message |
+| 5 | Second domain and `[On]` connections; connections in the document | The connection works in a test and appears in the document as “event → action” |
+| 6 | Level 2: requirements module, `[Requirement]` | Requirements appear under their method in the document |
+| 7 | Decisions based on results: NuGet package, trial in a real product | — |
 
-**Правила шага 4**, все проверяются отражением:
+**Step 4 rules**, all checked through reflection:
 
-- менеджер не получает в конструкторе другой менеджер и `IServiceProvider`;
-- методы менеджера принимают только простые значения, объектных моделей на входе нет;
-- у подконтекста ровно один менеджер;
-- у издателя нет обобщённого метода и метода, принимающего «любое событие»;
-- у публичного метода менеджера и у события есть комментарий — иначе документ не собрать;
-- объектная модель не меняет своих данных: изменяемых свойств нет.
+- a manager does not receive another manager or `IServiceProvider` in its constructor;
+- manager methods accept only simple values, with no object models as inputs;
+- a subcontext has exactly one manager;
+- a publisher has no generic method or method accepting “any event”;
+- public manager methods and events have comments; otherwise the document cannot be generated;
+- an object model does not change its data: no mutable properties.
 
-Метод без требований сборку не роняет: в документе у него стоит «требований нет».
+A method without requirements does not fail the build: the document labels it “no requirements”.
 
-## Критика
+## Critique
 
-- **Сборка читает то, что сама только что собрала.** Шаг 3 — самое неизведанное место плана: пакет должен
-  после компиляции прочитать сборку ядра и записать файл. Если это окажется хрупким, запасной путь — тест.
-- **Библиотека проверяет форму, а не смысл.** Метод `Process(Guid id)` пройдёт все правила. Качество имён
-  остаётся на ревью.
-- **Игрушечный пример всё прощает.** Трудные места образца — долгая работа, воркеры, данные в памяти — в него
-  не попадают. Настоящая проверка — проба на продукте, шаг 6.
-- **xmldoc и «предупреждения — ошибки».** Включённый файл документации требует комментарий к каждому публичному
-  члену — это прямой путь к пересказу кода. Это предупреждение выключаем; комментарий требует наше правило и
-  только там, где он идёт в документ.
-- **Риск костыльного фреймворка.** Защита одна: примитив добавляется, только если убирает код из примера.
+- **The build reads what it has just compiled.** Step 3 is the least explored part of the plan: after
+  compilation, the package must read the core assembly and write a file. If this proves fragile, a test is
+  the fallback.
+- **The library checks shape, not meaning.** A method named `Process(Guid id)` passes every rule. Name quality
+  is still a review concern.
+- **A toy example is too forgiving.** The hard parts of the pattern—long-running work, workers, in-memory
+  data—are left out. The real test is a trial in a product, step 7.
+- **xmldoc and warnings as errors.** Enabling the documentation file requires a comment for every public
+  member, which leads to restating the code. We disable this warning; our rule requires comments only where
+  they go into the document.
+- **Risk of a makeshift framework.** The only safeguard: add a primitive only if it removes code from the example.
 
-## Не решено
+## Undecided
 
-- Имена пакетов и атрибутов — показываются владельцу на шаге 1.
-- Насколько жёстко навязывать форму теста.
-- Свой тип для связей или служба — до шага 5.
+- Package names.
+- How strictly to enforce the test shape.
+- A dedicated type for connections or a service: decide before step 5.
