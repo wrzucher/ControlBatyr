@@ -1,1 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk" />
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>ControlBatyr.Requirements</PackageId>
+    <Description>Links requirement tests to ControlBatyr manager operations.</Description>
+  </PropertyGroup>
+</Project>
