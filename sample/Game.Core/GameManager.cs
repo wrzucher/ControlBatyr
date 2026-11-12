@@ -53,9 +53,11 @@ public sealed class GameManager(GamePersistence games, GameEventPublisher publis
     {
         Require(await CancelBetProblemAsync(betId, ct));
 
+        var bet = (await games.BetAsync(betId, ct))!;
+
         await games.CancelBetAsync(betId, ct);
 
-        publisher.NotifyBetCancelled(new BetCancelledEventArgs(betId));
+        publisher.NotifyBetCancelled(new BetCancelledEventArgs(bet.Id, bet.PlayerId, bet.Amount));
     }
 
     /// <summary>Lets the player see the bet's current state.</summary>

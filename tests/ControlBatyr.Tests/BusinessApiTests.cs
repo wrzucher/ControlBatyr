@@ -6,14 +6,14 @@ namespace ControlBatyr.Tests;
 
 public sealed class BusinessApiTests
 {
-    private static string Generate() => BusinessApi.Generate(typeof(BusinessApiTests).Assembly);
+    private static string Generate() => BusinessApi.Generate(typeof(BusinessApiTests).Assembly).Single(document => document.RelativePath == "gateway.md").Markdown;
 
     [Fact]
     public void Attributes_select_operations_and_events_but_unreachable_and_persistence_types_stay_hidden()
     {
         var markdown = Generate();
 
-        Assert.Contains("## Managers\n", markdown);
+        Assert.Contains("## Operations\n", markdown);
         Assert.Contains("### Gateway\n", markdown);
         Assert.Contains("### Snapshot\n", markdown);
         Assert.Contains("### Feed\n", markdown);
@@ -136,7 +136,7 @@ public sealed class BusinessApiTests
     public void Source_links_use_the_document_directory_without_absolute_paths_or_line_numbers()
     {
         var directory = Path.GetDirectoryName(TestFile())!;
-        var markdown = BusinessApi.Generate(Path.Combine(directory, "docs", "business-api.md"), typeof(BusinessApiTests).Assembly);
+        var markdown = BusinessApi.Generate(Path.Combine(directory, "docs"), typeof(BusinessApiTests).Assembly).Single(document => document.RelativePath == "gateway.md").Markdown;
 
         Assert.Contains("### Gateway\n\n[Source](../BusinessApiTests.cs)", markdown);
         Assert.Contains("### Snapshot\n\n[Source](../BusinessApiTests.cs)", markdown);
@@ -150,8 +150,9 @@ public sealed class BusinessApiTests
 }
 
 [Manager]
-public sealed class Gateway
+public sealed class Gateway(Feed feed)
 {
+    private readonly Feed feed = feed;
     /// <summary>Looks up a reading.</summary>
     /// <param name="id">The reading to look up.</param>
     /// <param name="ct"/>
@@ -160,7 +161,11 @@ public sealed class Gateway
     /// <example>Ignored example</example>
     /// <exception cref="InvalidOperationException">Ignored exception</exception>
     public Task<Snapshot?> FindAsync(Guid id, CancellationToken ct) => Task.FromResult<Snapshot?>(null);
-    public ValueTask SaveAsync(Guid id, CancellationToken ct) => ValueTask.CompletedTask;
+    public ValueTask SaveAsync(Guid id, CancellationToken ct)
+    {
+        feed.NotifyRecorded(new ReadingRecordedEventArgs(new Snapshot(ReadingState.Ready)));
+        return ValueTask.CompletedTask;
+    }
     public IReadOnlyList<Snapshot> All() => [];
     /// <summary>Joins supplied labels.</summary>
     public string Echo(IReadOnlyList<string> values) => string.Join(", ", values);

@@ -1,14 +1,18 @@
-# Business API
+# Game
 
-## Managers
+[Business API](index.md)
+
+## Operations
 
 <a id="type-game-core-gamemanager"></a>
 
 ### GameManager
 
-[Source](../Game.Core/GameManager.cs)
+[Source](../../Game.Core/GameManager.cs)
 
 Lets players place bets and cancel them until their game starts.
+
+<a id="type-game-core-gamemanager-creategameasync"></a>
 
 #### CreateGame
 
@@ -25,6 +29,8 @@ Sets when the game starts and bets can no longer be cancelled.
 
 The recorded game, including the identifier used to place bets.
 
+<a id="type-game-core-gamemanager-placebetasync"></a>
+
 #### PlaceBet
 
 Places a player's bet on an existing game.
@@ -40,6 +46,8 @@ Places a player's bet on an existing game.
 **Returns:** [Bet](#type-game-model-bet)
 
 The recorded bet in its initial open state.
+
+<a id="type-game-core-gamemanager-cancelbetproblemasync"></a>
 
 #### CancelBetProblem
 
@@ -59,6 +67,8 @@ All current reasons preventing cancellation; empty when cancellation is allowed.
 
 This preview does not change the bet. CancelBet checks again before cancelling it.
 
+<a id="type-game-core-gamemanager-cancelbetasync"></a>
+
 #### CancelBet
 
 Lets the player cancel an open bet before the game starts.
@@ -72,6 +82,8 @@ Lets the player cancel an open bet before the game starts.
 **Remarks**
 
 Listeners are notified after the cancellation has been recorded.
+
+<a id="type-game-core-gamemanager-betasync"></a>
 
 #### Bet
 
@@ -93,15 +105,19 @@ The current bet, or null when betId is unknown.
 
 ### GameEventPublisher
 
-[Source](../Game.Core/GameEventPublisher.cs)
+[Source](../../Game.Core/GameEventPublisher.cs)
 
 Announces changes to player bets after they have been recorded.
+
+<a id="type-game-core-gameeventpublisher-betplaced"></a>
 
 #### BetPlaced
 
 The player's bet has been placed.
 
 **Payload:** [BetPlacedEventArgs](#type-game-model-betplacedeventargs)
+
+<a id="type-game-core-gameeventpublisher-betcancelled"></a>
 
 #### BetCancelled
 
@@ -115,7 +131,7 @@ The player's bet has been cancelled.
 
 ### Bet
 
-[Source](../Game.Model/Bet.cs)
+[Source](../../Game.Model/Bet.cs)
 
 A player's bet on a game, including its current cancellation state.
 
@@ -140,7 +156,7 @@ A player's bet on a game, including its current cancellation state.
 
 ### BetCancelledEventArgs
 
-[Source](../Game.Model/BetCancelledEventArgs.cs)
+[Source](../../Game.Model/BetCancelledEventArgs.cs)
 
 Identifies the bet whose cancellation has been recorded.
 
@@ -149,12 +165,14 @@ Identifies the bet whose cancellation has been recorded.
 | Name | Type | Description |
 | --- | --- | --- |
 | BetId | Guid | The cancelled bet, for lookup or related updates. |
+| PlayerId | Guid | The player whose stake is returned. |
+| Amount | decimal | The stake to return. |
 
 <a id="type-game-model-betplacedeventargs"></a>
 
 ### BetPlacedEventArgs
 
-[Source](../Game.Model/BetPlacedEventArgs.cs)
+[Source](../../Game.Model/BetPlacedEventArgs.cs)
 
 The recorded bet announced to listeners.
 
@@ -179,7 +197,7 @@ The lifecycle of a player's bet.
 
 ### Game
 
-[Source](../Game.Model/Game.cs)
+[Source](../../Game.Model/Game.cs)
 
 A scheduled game that players can bet on.
 
@@ -203,3 +221,7 @@ Reasons a requested game operation cannot proceed.
 | GameStarted = 11 | The cancellation deadline has passed. |
 | BetNotFound = 20 | The selected bet does not exist. |
 | BetAlreadyCancelled = 21 | The bet has already been cancelled. |
+
+## Connections
+
+- [Game.BetCancelled](#type-game-core-gameeventpublisher-betcancelled) → [Account.RefundBet](account.md#type-game-core-accountmanager-refundbet) — Return the cancelled bet's stake to its player's account.

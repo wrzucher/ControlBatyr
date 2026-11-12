@@ -8,61 +8,147 @@ namespace ControlBatyr.Inspection;
 internal sealed class BusinessDocument
 {
     private const BindingFlags PublicMembers = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
-    private readonly Type[] types;
     private readonly HashSet<Type> models = [];
     private readonly XmlComments comments = new();
     private readonly NullabilityInfoContext nullability = new();
     private readonly StringBuilder output = new();
-    private readonly string? documentPath;
+    private readonly string? documentDirectory;
+    private string? documentPath;
+    private string currentFile = "index.md";
+    private readonly Dictionary<Type, string> modelFiles = [];
+    private readonly Domain[] domains;
+    private readonly Connection[] connections;
 
-    internal BusinessDocument(Assembly[] assemblies, string? documentPath)
+    private sealed record Domain(Type Manager, Type[] Publishers, HashSet<Type> Models)
     {
-        this.documentPath = documentPath;
-        types = assemblies.Distinct().OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)
+        internal string Name => Manager.Name.EndsWith("Manager", StringComparison.Ordinal) ? Manager.Name[..^7] : Manager.Name;
+        internal string File => Name.ToLowerInvariant() + ".md";
+    }
+
+    internal BusinessDocument(Assembly[] assemblies, string? documentDirectory)
+    {
+        this.documentDirectory = documentDirectory;
+        var types = assemblies.Distinct().OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)
             .SelectMany(assembly => assembly.GetTypes().OrderBy(type => type.MetadataToken))
             .Where(type => !Excluded(type)).ToArray();
-        foreach (var type in types)
+        domains = types.Where(type => type.IsDefined(typeof(ManagerAttribute), false)).Select(manager =>
         {
-            if (type.IsDefined(typeof(ObjectModelAttribute), false))
+            models.Clear();
+            DiscoverMethods(manager);
+            var publishers = manager.GetConstructors().SelectMany(constructor => constructor.GetParameters())
+                .Select(parameter => parameter.ParameterType)
+                .Where(type => type.IsDefined(typeof(EventPublisherAttribute), false)).Distinct().ToArray();
+            foreach (var parameter in publishers.SelectMany(EventsOf).SelectMany(EventParameters))
             {
-                Discover(type);
+                Discover(parameter.ParameterType);
             }
-            if (type.IsDefined(typeof(ManagerAttribute), false))
+            return new Domain(manager, publishers, [.. models]);
+        }).ToArray();
+        var duplicate = domains.GroupBy(domain => domain.File).FirstOrDefault(group => group.Count() > 1
+            || group.Key is "index.md" or "shared.md");
+        if (duplicate is not null)
+        {
+            throw new InvalidOperationException($"Domain document path is not unique: {duplicate.Key}.");
+        }
+        models.Clear();
+        models.UnionWith(domains.SelectMany(domain => domain.Models));
+        foreach (var model in models)
+        {
+            var owners = domains.Where(domain => domain.Models.Contains(model)).ToArray();
+            modelFiles[model] = owners.Length == 1 ? owners[0].File : "shared.md";
+        }
+        connections = Connection.Find(assemblies);
+        foreach (var connection in connections)
+        {
+            if (domains.Count(domain => domain.Publishers.Contains(connection.Publisher)) != 1
+                || domains.Count(domain => domain.Manager == connection.Manager) != 1)
             {
-                DiscoverMethods(type);
-            }
-            if (type.IsDefined(typeof(EventPublisherAttribute), false))
-            {
-                foreach (var parameter in EventsOf(type).SelectMany(EventParameters))
-                {
-                    Discover(parameter.ParameterType);
-                }
+                throw new InvalidOperationException($"Connection {connection.Method.Name} needs one publisher domain and one target manager domain in the supplied assemblies.");
             }
         }
     }
 
-    internal string Render()
+    internal IReadOnlyList<(string RelativePath, string Markdown)> Render()
     {
-        Text("# Business API");
-        Section("Managers", types.Where(type => type.IsDefined(typeof(ManagerAttribute), false)), Methods);
-        Section("Events", types.Where(type => type.IsDefined(typeof(EventPublisherAttribute), false)), type =>
+        var documents = new List<(string RelativePath, string Markdown)>();
+        Start("index.md", "Business API");
+        Text("## Domains");
+        foreach (var domain in domains)
         {
-            foreach (var item in EventsOf(type))
+            Text($"- [{domain.Name}]({domain.File}) — {comments.Summary(domain.Manager)}");
+        }
+        Connections(connections);
+        documents.Add(Finish());
+        foreach (var domain in domains)
+        {
+            Start(domain.File, domain.Name);
+            Text("[Business API](index.md)");
+            Section("Operations", [domain.Manager], Methods);
+            Section("Events", domain.Publishers, publisher =>
             {
-                Text($"#### {item.Name}");
-                Text(comments.Summary(item));
-                var payload = EventPayload(item);
-                if (payload.Length > 0)
+                foreach (var item in EventsOf(publisher))
                 {
-                    Text($"**Payload:** {payload}");
+                    Text($"<a id=\"{MemberAnchor(item)}\"></a>");
+                    Text($"#### {item.Name}");
+                    Text(comments.Summary(item));
+                    var payload = EventPayload(item);
+                    if (payload.Length > 0)
+                    {
+                        Text($"**Payload:** {payload}");
+                    }
+                    Remarks(item);
                 }
-                Remarks(item);
-            }
-        });
-        Section("Models", models.OrderBy(type => type.Assembly.FullName, StringComparer.Ordinal)
-            .ThenBy(type => type.MetadataToken), Model);
-        return output.ToString().TrimEnd() + "\n";
+            });
+            RenderModels(domain.File);
+            Connections(connections.Where(connection => connection.Manager == domain.Manager
+                || domain.Publishers.Contains(connection.Publisher)));
+            documents.Add(Finish());
+        }
+        if (modelFiles.ContainsValue("shared.md"))
+        {
+            Start("shared.md", "Shared models");
+            Text("[Business API](index.md)");
+            RenderModels("shared.md");
+            documents.Add(Finish());
+        }
+        return documents;
     }
+
+    private void Start(string file, string title)
+    {
+        output.Clear();
+        currentFile = file;
+        documentPath = documentDirectory is null ? null : Path.Combine(documentDirectory, file);
+        Text($"# {title}");
+    }
+
+    private (string RelativePath, string Markdown) Finish() => (currentFile, output.ToString().TrimEnd() + "\n");
+
+    private void RenderModels(string file) => Section("Models", models.Where(type => modelFiles[type] == file)
+        .OrderBy(type => type.Assembly.FullName, StringComparer.Ordinal).ThenBy(type => type.MetadataToken), Model);
+
+    private string Link(string label, string file, string anchor) => $"[{label}]({(file == currentFile ? "" : file)}#{anchor})";
+
+    private void Connections(IEnumerable<Connection> source)
+    {
+        var items = source.ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+        Text("## Connections");
+        foreach (var connection in items)
+        {
+            var from = domains.Single(domain => domain.Publishers.Contains(connection.Publisher));
+            var to = domains.Single(domain => domain.Manager == connection.Manager);
+            var operation = MethodsOf(connection.Manager).FirstOrDefault(method => method.Name == connection.Method.Name);
+            var actionAnchor = operation is null ? Anchor(connection.Manager) : MemberAnchor(operation);
+            Text($"- {Link(from.Name + "." + connection.Event.Name, from.File, MemberAnchor(connection.Event))} → "
+                + $"{Link(to.Name + "." + connection.Method.Name, to.File, actionAnchor)} — {comments.Summary(connection.Method)}");
+        }
+    }
+
+    private static string MemberAnchor(MemberInfo member) => Anchor(member.DeclaringType!) + "-" + member.Name.ToLowerInvariant();
 
     private static bool Excluded(Type type) => type.IsDefined(typeof(PersistenceAttribute), false);
     private static bool Framework(Type type) => type.Assembly == typeof(string).Assembly
@@ -224,6 +310,7 @@ internal sealed class BusinessDocument
             {
                 name += "&lt;" + string.Join(", ", method.GetGenericArguments().Select(argument => argument.Name)) + "&gt;";
             }
+            Text($"<a id=\"{MemberAnchor(method)}\"></a>");
             Text($"#### {name}");
             Text(comments.Summary(method));
             var parameters = ParametersOf(method);
@@ -299,7 +386,7 @@ internal sealed class BusinessDocument
         var definition = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
         if (models.Contains(definition))
         {
-            name = $"[{name}](#{Anchor(definition)})";
+            name = Link(name, modelFiles[definition], Anchor(definition));
         }
         if (type.IsGenericType)
         {
