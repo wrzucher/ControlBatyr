@@ -1,136 +1,85 @@
 # ControlBatyr plan
 
-Status: 2026-11-12, steps 1–6 complete, packages verified, nothing published. [D] means decided by the owner; [P] means lead proposal.
+Status: 2026-11-12. [D] means decided by the owner; [P] means lead proposal.
+Drafts and the owner's ideas in his own words: [drafts/](drafts/). The design pattern: [concept.md](concept.md)
+(in Russian).
 
-## Why
+## What the product is
 
-The pattern is described in [concept.md](concept.md), which is in Russian. The business logic core follows it:
-a manager as the domain API, object models, business rules, events, and domain connections. In each product,
-the rules are discussed again, and the code still drifts. The library should enforce the shape itself,
-for both people and AI agents. [D]
+A simple, extensible library that turns the code of a business core into **whole documentation based on the
+code, with the code as the single source of truth**. [D]
 
-The minimum task is **business API generation**: the document is generated from the core, like OpenAPI from
-controllers. [D]
+- It is more than "OpenAPI for the business layer": the end goal is complete documentation — API, requirements,
+  diagrams, written text — where every statement is tied to the code it describes.
+- You can quickly find where a requirement is implemented in the code, extend it and move on.
+- It is a tool against the growth of AI slop in projects developed by AI agents: the documentation is derived,
+  checkable and always current.
+- Simple by default; everything beyond documentation is an extension.
 
-- The document is regenerated **at build time** and stored in the repository. Pull request reviews always
-  show the current business API diff, out of the box. [D]
-- The first version is documentation only: an attribute is there — describe it; it is not — skip it. [D]
-- Validation is an optional extension, the `ControlBatyr.Rules` package; the up-to-date check of committed
-  documents is a setting, off by default. If the document cannot be generated at all, the build fails. [D]
-- Editor hints are not needed. [D]
-- The library does not handle reason codes or how operations fail: that is up to the product. [D]
-- The product configures the documentation root folder. There may be several documents. [D]
+## Principles
 
-**Documentation is the product.** We want good documentation: text, decisions, diagrams, and schematics.
-Content generated from the core is part of it: handwritten Markdown and generated documents will include
-each other. We are not doing this now, but choose the format and build setup to support it later. [D]
+1. **Read the code once, get a typed description, and let anyone work with it.** Between the code and the
+   documents there is a **business API model**: domains, operations, events, models, connections, requirements.
+   Markdown, diagrams, rules and AI enrichment are consumers of the model. [D]
+2. **Traversal with extension points.** The library walks the model and gives extensions the nodes; what an
+   extension does with them — one AI call, a supervised workflow, nothing — is not the library's concern. [D]
+3. **One identifier for everything.** Every node has a stable identifier (the xmldoc member ID). The same
+   identifier is the document anchor, the diagram element, the requirement link, a scenario tag, an insert in a
+   handwritten document and the ground of a generated statement. This is what makes the documentation whole. [D]
+4. **A role comes from an attribute, not from a name.** [D]
+5. **We do not look inside methods.** Only the external shape: signatures, attributes, comments. [D]
+6. **Documentation first; validation is an extension.** An attribute is there — describe it; it is not — skip
+   it. [D]
+7. **AI is never part of the build.** Enrichment is a separate command; its result is committed and reviewed;
+   the build only uses what is stored. [D]
+8. **No fixed prompts.** Defaults exist, but a product can replace any prompt any way it likes — through a
+   prompt provider. It must be obvious where a prompt comes from. [D]
+9. **Start simple, add when it hurts.** [D]
 
-## Three levels
+## What exists
 
-Start simple, then add complexity. [D]
-
-| Level | What we describe | Status |
+| Part | Package | State |
 |---|---|---|
-| 1. External core API | manager methods, object models, events, domain connections | first |
-| 2. Requirements | tests linked to manager methods; a separate module | second |
-| 3. Method internals | which event a method raises, how it fails | may not be implemented |
+| Role attributes: manager, object model, event publisher, persistence | `ControlBatyr` | done |
+| Domain connections `[On<T>]` and their startup wiring | `ControlBatyr` | done; wiring moves to an extension (step 1) |
+| Business API documents regenerated at build, one file per domain, OpenAPI-like | `ControlBatyr.Inspection` | done |
+| Requirements from tests `[Requirement<T>]` | `ControlBatyr.Requirements` | done |
+| Shape rules CB0001–CB0007 | `ControlBatyr.Rules` | done, optional |
+| Packages and a package smoke test | — | built, not published |
 
-We do not inspect method internals: we describe the external API, as OpenAPI describes controllers.
-There is no source parsing (Roslyn). The library reads the compiled assembly through reflection and takes
-comments from the xmldoc file. [D]
+Product settings: `ControlBatyrDocumentationDirectory` (where the documents go), `ControlBatyrCheckDocuments`
+(fail when committed documents are stale, off by default).
 
-**An attribute defines the role, not the name.** A type marked as a manager must follow manager rules:
-the library describes the type and checks its rules. This keeps the library independent of others' naming
-conventions. [D]
+## Next steps
 
-| Attribute | Meaning for the library |
-|---|---|
-| manager | public methods go into the document; manager rules apply |
-| object model | data and domain methods go into the document; data is immutable |
-| event publisher | events are named after domain facts, such as `BetCancelled`, and go into the document; notification methods use the `Notify…` prefix |
-| subcontext | excluded from the document; we check who uses it |
-| `[On]` | domain connection: this event triggers this action |
-| `[Requirement]` | a test is a requirement for this manager method (level 2) |
-
-Attribute names (step 1): `[Manager]`, `[ObjectModel]`, `[EventPublisher]`, `[Persistence]`. [D]
-
-## Repository layout
-
-```
-Directory.Build.props         .NET 10, Nullable, warnings as errors
-src/ControlBatyr              referenced by the product core: attributes only
-src/ControlBatyr.Inspection   core inspection, rules, document generation; runs during the product build
-tests/ControlBatyr.Tests      library tests: small invalid cores on which a rule must fail
-sample/Game.Model             object models
-sample/Game.Persistence       subcontext using in-memory SQLite
-sample/Game.Core              one manager, specification, event publisher
-sample/Game.Tests             requirement tests and a test that the document is generated and up to date
-sample/docs/                  generated example documentation; stored in the repository for reading
-.github/workflows/ci.yml      build and tests
-```
-
-The example is a fictional betting game: one domain, 2–3 manager methods. This is the example's vocabulary;
-we are not designing the game itself.
-
-## Steps
-
-Each step is a separate pull request. After each step, show it to the owner, who decides whether to continue.
+Each step is a separate pull request.
 
 | No. | What we do | Done when |
 |---|---|---|
-| 1 (done) | Example following the pattern and role attributes | Build and tests pass; a manager method reads like text; every test is a requirement |
-| 2 (done) | Level 1 document like OpenAPI: operations, events, models described once and linked | `sample/docs/business-api.md` is generated by a test; the owner has read it |
-| 3 (done) | Second domain, `[On]` connections, one document per domain | Connection works in a test; documents are split per domain with an index and cross-file links |
-| 4 (done) | Regenerate the documents during the build; configure the documentation folder | `dotnet build` of the example updates the documents in the configured folder; CI fails if the repository copy is stale |
-| 5 (done) | Shape rules (below) | The example has no violations; each rule has an invalid core where the build fails with a clear message |
-| 6 (done) | Level 2: requirements module, `[Requirement]` | Requirements appear under their method in the document |
-| 7 | Packages built and verified locally (done); publishing and a trial in a real product — owner decision | — |
+| 1 | **The model.** Reading, model and rendering are separated; nodes carry identifiers; the model is also written as a file next to the documents. Connection wiring moves to its own extension package. The coverage counter and "No requirements" are removed: they push towards a test per method, which the concept calls harmful. | The generated Markdown is the same except the removed lines; a test reads the model file |
+| 2 | **ControlBatyr documents itself.** The library's own entry points and model are marked with its attributes and documented by itself. | The library's documents are generated at its build and committed |
+| 3 | **Class diagram** (Mermaid) per domain from the model, following the architecture diagram profile (`classDiagram` + `%% @arch/1` directives) where GitHub can render it. | Diagrams are in the documents and render on GitHub |
+| 4 | **Extension points.** An extension can add nodes and links to the model (Reqnroll scenarios, handwritten documents) and add output. | Reqnroll scenarios with a tag appear as requirements through an extension, without changes in the core |
+| 5 | **Publish to NuGet** and try on a real product. | Owner's word |
+| 6 | **AI extension** (`Microsoft.Extensions.AI`, `IChatClient`): a separate project and command; prompt provider; generated statements carry the identifiers they are grounded on; stale statements are detected by the fingerprint of their grounds. | To be discussed before work |
 
-**Splitting documents** (step 3). One file per domain, an index with domains and connections, a shared file for
-models visible in the API of several domains. Domain membership comes from the code, without new attributes:
-a publisher belongs to the manager that receives it in its constructor; a model belongs to the only domain
-whose API exposes it. [P]
+## Ideas kept for later [D]
 
-**Requirements** (step 6). [P]
+- **Handwritten Markdown and generated parts together.** A handwritten document inserts a generated fragment by
+  identifier, or declares which node it is about and gets linked from it. A reference to an identifier that no
+  longer exists is reported.
+- **More substance in the business layer:** use cases and scenarios in words, each with grounds that can be
+  validated — not slop.
+- **Supervised generation.** One AI call by default; a product may replace it with a supervised workflow. The
+  library only provides the nodes and the place for the result.
+- **Reqnroll and the documentation** joined, possibly with an AI helper that proposes which operations a scenario
+  belongs to; a person accepts the proposal.
 
-- A test is linked to an operation explicitly: `[Requirement<GameManager>(nameof(GameManager.CancelBetAsync))]`.
-  The attribute lives in its own small project — requirements are a separate module.
-- The requirement text is the test name made readable (`Bet_cannot_be_cancelled_once_the_game_starts` →
-  "Bet cannot be cancelled once the game starts"); a `<summary>` on the test replaces it. No second copy of the
-  text in an attribute.
-- The library does not impose a test shape: no base class, no `Given` helpers. A test without the attribute is
-  not part of the document.
-- The documents are generated where both the core and the requirement tests are visible: the requirement test
-  project. The core project then only needs the rules.
-- An operation without requirements shows "No requirements" — visible, not a build failure.
+## Critique we keep in mind
 
-**Step 5 rules**, all checked through reflection:
-
-- a manager does not receive another manager or `IServiceProvider` in its constructor;
-- manager methods accept only simple values, with no object models as inputs;
-- a subcontext has exactly one manager;
-- a publisher has no generic method or method accepting “any event”;
-- public manager methods and events have comments; otherwise the document cannot be generated;
-- an object model does not change its data: no mutable properties.
-
-A method without requirements does not fail the build: the document labels it “no requirements”.
-
-## Critique
-
-- **The build reads what it has just compiled.** Step 4 is the least explored part of the plan: after
-  compilation, the package must read the core assembly and write a file. If this proves fragile, a test is
-  the fallback.
-- **The library checks shape, not meaning.** A method named `Process(Guid id)` passes every rule. Name quality
-  is still a review concern.
-- **A toy example is too forgiving.** The hard parts of the pattern—long-running work, workers, in-memory
-  data—are left out. The real test is a trial in a product, step 7.
-- **xmldoc and warnings as errors.** Enabling the documentation file requires a comment for every public
-  member, which leads to restating the code. We disable this warning; our rule requires comments only where
-  they go into the document.
-- **Risk of a makeshift framework.** The only safeguard: add a primitive only if it removes code from the example.
-
-## Undecided
-
-- Package names.
-- How strictly to enforce the test shape.
-- A dedicated type for connections or a service: decided in step 3, shown to the owner.
+- The library checks shape, not meaning: `Process(Guid id)` passes every rule.
+- A toy example is forgiving; the real test is a real product.
+- Three products are close together: the documentation generator, the rules, and knowledge with AI. The first
+  must stay simple and must not be swallowed by the third.
+- Every primitive must earn its place: it removes code from the example or the documentation cannot be built
+  without it.
