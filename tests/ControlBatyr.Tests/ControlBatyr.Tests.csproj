@@ -5,6 +5,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../sample/Game.Tests/Game.Tests.csproj" />
+    <ProjectReference Include="../../src/ControlBatyr.Connections/ControlBatyr.Connections.csproj" />
     <ProjectReference Include="../../sample/Game.Core/Game.Core.csproj" />
     <ProjectReference Include="../../src/ControlBatyr.Inspection/ControlBatyr.Inspection.csproj" />
     <ProjectReference Include="../../src/ControlBatyr.Rules/ControlBatyr.Rules.csproj" />

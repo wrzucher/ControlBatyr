@@ -29,10 +29,6 @@ Sets when the game starts and bets can no longer be cancelled.
 
 The recorded game, including the identifier used to place bets.
 
-**Requirements**
-
-No requirements
-
 <a id="type-game-core-gamemanager-placebetasync"></a>
 
 #### PlaceBet
@@ -119,10 +115,6 @@ Lets the player see the bet's current state.
 **Returns:** [Bet](#type-game-model-bet)?
 
 The current bet, or null when betId is unknown.
-
-**Requirements**
-
-No requirements
 
 ## Events
 

@@ -8,6 +8,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/ControlBatyr.Connections/ControlBatyr.Connections.csproj" />
     <ProjectReference Include="../Game.Core/Game.Core.csproj" />
     <ProjectReference Include="../../src/ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />
     <ProjectReference Include="../../src/ControlBatyr.Inspection/ControlBatyr.Inspection.csproj" ReferenceOutputAssembly="false" />

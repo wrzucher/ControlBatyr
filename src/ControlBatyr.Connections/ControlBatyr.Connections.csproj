@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Asynchronous domain connection wiring for ControlBatyr.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../ControlBatyr/ControlBatyr.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
+  </ItemGroup>
+</Project>

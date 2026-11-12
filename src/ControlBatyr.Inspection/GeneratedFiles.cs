@@ -26,7 +26,7 @@ internal static class GeneratedFiles
         foreach (var file in previous.Concat(current))
         {
             if (string.IsNullOrWhiteSpace(file) || file.IndexOfAny(['/', '\\', ':']) >= 0
-                || !file.EndsWith(".md", StringComparison.Ordinal) || file is ".md" or "..md")
+                || (!file.EndsWith(".md", StringComparison.Ordinal) && file != "business-api.json") || file is ".md" or "..md")
             {
                 throw new InvalidOperationException($"Invalid generated document name: {file}.");
             }

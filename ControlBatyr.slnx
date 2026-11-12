@@ -6,6 +6,7 @@
     <Project Path="sample/Game.Tests/Game.Tests.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/ControlBatyr.Connections/ControlBatyr.Connections.csproj" />
     <Project Path="src/ControlBatyr/ControlBatyr.csproj" />
     <Project Path="src/ControlBatyr.Rules/ControlBatyr.Rules.csproj" />
     <Project Path="src/ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />

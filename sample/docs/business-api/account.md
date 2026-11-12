@@ -27,10 +27,6 @@ Opens an account with the player's initial funds.
 
 **Returns:** [Account](#type-game-model-account)
 
-**Requirements**
-
-No requirements
-
 <a id="type-game-core-accountmanager-accountasync"></a>
 
 #### Account
@@ -44,10 +40,6 @@ Shows the player's available funds.
 | playerId | Guid |
 
 **Returns:** [Account](#type-game-model-account)
-
-**Requirements**
-
-No requirements
 
 <a id="type-game-core-accountmanager-refundbetasync"></a>
 

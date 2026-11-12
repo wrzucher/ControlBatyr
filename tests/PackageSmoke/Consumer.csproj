@@ -11,6 +11,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ControlBatyr" Version="$(ControlBatyrPackageVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.15" />
+    <PackageReference Include="ControlBatyr.Connections" Version="$(ControlBatyrPackageVersion)" />
     <PackageReference Include="ControlBatyr.Requirements" Version="$(ControlBatyrPackageVersion)" />
     <PackageReference Include="ControlBatyr.Rules" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" Condition="'$(UseRules)' == 'true'" />
     <PackageReference Include="ControlBatyr.Inspection" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" />
