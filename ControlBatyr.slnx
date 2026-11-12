@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/sample/">
+    <Project Path="sample/Game.Core/Game.Core.csproj" />
+    <Project Path="sample/Game.Model/Game.Model.csproj" />
+    <Project Path="sample/Game.Persistence/Game.Persistence.csproj" />
+    <Project Path="sample/Game.Tests/Game.Tests.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ControlBatyr/ControlBatyr.csproj" />
+  </Folder>
+</Solution>
