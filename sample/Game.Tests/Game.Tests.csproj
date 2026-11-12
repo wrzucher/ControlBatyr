@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ControlBatyrDocumentationDirectory>../docs/business-api</ControlBatyrDocumentationDirectory>
+    <ControlBatyrRulesPath>../../src/ControlBatyr.Rules/bin/$(Configuration)/net10.0/ControlBatyr.Rules.dll</ControlBatyrRulesPath>
     <ControlBatyrToolPath>../../src/ControlBatyr.Inspection/bin/$(Configuration)/net10.0/ControlBatyr.Inspection.dll</ControlBatyrToolPath>
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
@@ -10,6 +11,7 @@
     <ProjectReference Include="../Game.Core/Game.Core.csproj" />
     <ProjectReference Include="../../src/ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />
     <ProjectReference Include="../../src/ControlBatyr.Inspection/ControlBatyr.Inspection.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/ControlBatyr.Rules/ControlBatyr.Rules.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="11.0.0" />
     <PackageReference Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>

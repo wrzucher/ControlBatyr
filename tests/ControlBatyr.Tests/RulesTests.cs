@@ -86,7 +86,7 @@ public sealed class RulesTests
     [Fact]
     public void The_sample_core_and_its_attributed_model_and_persistence_dependencies_pass_every_rule()
     {
-        var types = Rules.ProductTypes(typeof(Game.Core.GameManager).Assembly);
+        var types = ProductTypes.Find(typeof(Game.Core.GameManager).Assembly);
         Assert.Contains(typeof(Game.Model.Bet), types);
         Assert.Contains(typeof(Game.Persistence.GamePersistence), types);
         Assert.Empty(Rules.Check(types));

@@ -68,6 +68,16 @@ public sealed class RequirementsTests
         Assert.Empty(Rules.Check(typeof(RequirementsTests)));
     }
 
+    [Fact]
+    public void Invalid_targets_are_not_attached_to_any_documented_operation()
+    {
+        var markdown = string.Join("\n", Documents().Values);
+        foreach (var name in new[] { "Missing", "Private", "Unmarked", "Property", "ObjectMethod" })
+        {
+            Assert.DoesNotContain("- " + name + " —", markdown);
+        }
+    }
+
     private static string TestFile([CallerFilePath] string path = "") => path;
 
     private sealed class InvalidRequirements

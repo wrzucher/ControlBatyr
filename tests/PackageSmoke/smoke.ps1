@@ -14,8 +14,8 @@ function Invoke-Dotnet {
 New-Item -ItemType Directory -Path $feed, $consumer | Out-Null
 Invoke-Dotnet pack (Join-Path $repo 'ControlBatyr.slnx') -c Release -o $feed
 $packages = @(Get-ChildItem $feed -Filter '*.nupkg')
-if ($packages.Count -ne 3) { throw "Expected three packages, found $($packages.Count)." }
-foreach ($id in 'ControlBatyr', 'ControlBatyr.Requirements', 'ControlBatyr.Inspection') {
+if ($packages.Count -ne 4) { throw "Expected four packages, found $($packages.Count)." }
+foreach ($id in 'ControlBatyr', 'ControlBatyr.Requirements', 'ControlBatyr.Inspection', 'ControlBatyr.Rules') {
     $package = Join-Path $feed "$id.$version.nupkg"
     if (!(Test-Path $package)) { throw "Missing $id $version" }
     $archive = [IO.Compression.ZipFile]::OpenRead($package)
@@ -35,6 +35,12 @@ foreach ($id in 'ControlBatyr', 'ControlBatyr.Requirements', 'ControlBatyr.Inspe
              !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Inspection.runtimeconfig.json') -or
              @($archive.Entries | Where-Object FullName -Like 'lib/*').Count -ne 0)) {
             throw 'Inspection must contain build integration and a tool, with no runtime library.'
+        }
+        if ($id -eq 'ControlBatyr.Rules' -and
+            (!$archive.GetEntry('build/ControlBatyr.Rules.targets') -or
+             !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Rules.dll') -or
+             @($archive.Entries | Where-Object FullName -Like 'lib/*').Count -ne 0)) {
+            throw 'Rules must contain build integration and validation, with no runtime library.'
         }
     } finally { $archive.Dispose() }
 }
@@ -76,6 +82,17 @@ if ((Test-Path (Join-Path $output 'ControlBatyr.Inspection.dll')) -or
     throw 'Inspection must not be a consumer runtime dependency.'
 }
 
+Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:ControlBatyrCheckDocuments=true"
+Add-Content $document 'Stale document'
+$stale = & dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:ControlBatyrCheckDocuments=true" 2>&1
+if ($LASTEXITCODE -eq 0 -or ($stale -join "`n") -notmatch 'documents are stale.*rebuild and commit' -or
+    !(Get-Content $document -Raw).Contains('Stale document')) {
+    $stale | Write-Output
+    throw 'Document checking must reject stale documents without rewriting them.'
+}
+Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version"
+Write-Output 'PASS: check mode accepts current documents and rejects stale documents without writing.'
+
 Add-Content (Join-Path $consumer 'Consumer.cs') @'
 
 [ObjectModel]
@@ -83,14 +100,30 @@ public sealed class BrokenModel
 {
     public int Value { get; set; }
 }
-'@
-$failure = & dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" 2>&1
-$failureCode = $LASTEXITCODE
-if ($failureCode -eq 0 -or ($failure -join "`n") -notmatch 'CB0006') {
-    $failure | Write-Output
-    throw 'The packaged rule must reject a mutable model with CB0006.'
+
+public static class UnattachedRequirements
+{
+    [Requirement<TicketManager>("Missing")]
+    public static void Missing_operation_is_ignored() { }
 }
-Write-Output 'PASS: packaged rule rejected a mutable model (CB0006).'
+'@
+Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version"
+if ((Get-Content $document -Raw).Contains('Missing operation is ignored')) {
+    throw 'A requirement targeting a missing operation must not appear in documents.'
+}
+Write-Output 'PASS: without Rules, a mutable model and an invalid requirement target build successfully.'
+Invoke-Dotnet restore $project --configfile (Join-Path $consumer 'NuGet.Config') --packages $cache "-p:ControlBatyrPackageVersion=$version" "-p:UseRules=true"
+$failure = & dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:UseRules=true" 2>&1
+$failureCode = $LASTEXITCODE
+if ($failureCode -eq 0 -or ($failure -join "`n") -notmatch 'CB0006' -or ($failure -join "`n") -notmatch 'CB0007') {
+    $failure | Write-Output
+    throw 'Packaged rules must reject a mutable model with CB0006 and an invalid target with CB0007.'
+}
+Write-Output 'PASS: with Rules, the same consumer fails with CB0006 and CB0007.'
+if ((Test-Path (Join-Path $output 'ControlBatyr.Rules.dll')) -or
+    (Get-Content (Join-Path $output 'Consumer.deps.json') -Raw).Contains('ControlBatyr.Rules')) {
+    throw 'Rules must not be a consumer runtime dependency.'
+}
 Write-Output 'PASS: generated index, manager, model and requirement documentation; no inspection runtime dependency.'
 $packages.Name | Write-Output
 Write-Output 'Package smoke test passed.'

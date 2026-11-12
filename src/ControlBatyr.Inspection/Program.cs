@@ -4,9 +4,9 @@ using ControlBatyr.Inspection;
 
 try
 {
-    if (args.Length != 3)
+    if (args.Length != 5)
     {
-        throw new ArgumentException("Usage: ControlBatyr.Inspection <documentation folder> <assembly list file> <reference list file>");
+        throw new ArgumentException("Usage: ControlBatyr.Inspection <documentation folder> <assembly list file> <reference list file> <rules assembly or empty> <check documents>");
     }
 
     var assemblies = File.ReadAllLines(args[1]).Where(line => !string.IsNullOrWhiteSpace(line)).Select(Path.GetFullPath).ToArray();
@@ -24,8 +24,11 @@ try
     };
     var directory = Path.GetFullPath(args[0]);
     var cores = assemblies.Select(AssemblyLoadContext.Default.LoadFromAssemblyPath).ToArray();
-    var types = Rules.ProductTypes(cores);
-    var violations = Rules.Check(types);
+    var types = ProductTypes.Find(cores);
+    var violations = string.IsNullOrEmpty(args[3]) ? [] :
+        (IReadOnlyList<string>)AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[3]))
+            .GetType("ControlBatyr.Inspection.Rules", throwOnError: true)!
+            .GetMethod("Check", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, [types])!;
     foreach (var violation in violations)
     {
         Console.Error.WriteLine(violation);
@@ -35,8 +38,15 @@ try
         return 1;
     }
     var documents = BusinessApi.Generate(directory, types.Select(type => type.Assembly).Distinct().ToArray());
-    GeneratedFiles.Write(directory, documents);
-    Console.WriteLine($"ControlBatyr: generated {documents.Count} business API documents in {directory}.");
+    if (args[4].Equals("true", StringComparison.OrdinalIgnoreCase))
+    {
+        GeneratedFiles.Check(directory, documents);
+    }
+    else
+    {
+        GeneratedFiles.Write(directory, documents);
+    }
+    Console.WriteLine($"ControlBatyr: {(args[4].Equals("true", StringComparison.OrdinalIgnoreCase) ? "checked" : "generated")} {documents.Count} business API documents in {directory}.");
     return 0;
 }
 catch (Exception exception)

@@ -54,6 +54,48 @@ public sealed class GeneratedFilesTests : IDisposable
         Assert.All(paths, path => Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path)));
     }
 
+    [Fact]
+    public void Check_accepts_current_documents_and_preserves_every_file()
+    {
+        GeneratedFiles.Write(directory, [("index.md", "Index\n")]);
+        File.WriteAllText(Path.Combine(directory, "decisions.md"), "Handwritten\n");
+        var paths = Directory.GetFiles(directory);
+        var timestamp = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        foreach (var path in paths) File.SetLastWriteTimeUtc(path, timestamp);
+
+        GeneratedFiles.Check(directory, [("index.md", "Index\n")]);
+
+        Assert.All(paths, path => Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path)));
+        Assert.Equal("Handwritten\n", File.ReadAllText(Path.Combine(directory, "decisions.md")));
+    }
+
+    [Theory]
+    [InlineData("changed")]
+    [InlineData("missing")]
+    [InlineData("new")]
+    [InlineData("obsolete")]
+    [InlineData("manifest")]
+    public void Check_rejects_stale_documents_or_manifest_without_writing(string change)
+    {
+        GeneratedFiles.Write(directory, [("index.md", "Index\n")]);
+        if (change == "changed") File.WriteAllText(Path.Combine(directory, "index.md"), "Old\n");
+        if (change == "missing") File.Delete(Path.Combine(directory, "index.md"));
+        if (change == "manifest") File.Delete(Path.Combine(directory, ".controlbatyr-generated"));
+        var before = Directory.GetFiles(directory).ToDictionary(path => path, File.ReadAllText);
+        (string, string)[] expected = change switch
+        {
+            "new" => [("index.md", "Index\n"), ("new.md", "New\n")],
+            "obsolete" => [],
+            _ => [("index.md", "Index\n")]
+        };
+
+        var failure = Assert.Throws<InvalidOperationException>(() => GeneratedFiles.Check(directory, expected));
+
+        Assert.Contains("documents are stale; rebuild and commit", failure.Message);
+        Assert.Equal(before.Keys.Order(), Directory.GetFiles(directory).Order());
+        Assert.All(before, pair => Assert.Equal(pair.Value, File.ReadAllText(pair.Key)));
+    }
+
     [Theory]
     [InlineData("../handwritten.md")]
     [InlineData("..\\handwritten.md")]
@@ -84,7 +126,7 @@ public sealed class GeneratedFilesTests : IDisposable
         var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "exec", "--runtimeconfig", Path.ChangeExtension(testAssembly, ".runtimeconfig.json"),
             "--depsfile", Path.ChangeExtension(testAssembly, ".deps.json"), typeof(BusinessApi).Assembly.Location,
-            directory, assemblyList, referenceList })
+            directory, assemblyList, referenceList, invalidCore ? typeof(Rules).Assembly.Location : "", "false" })
         {
             start.ArgumentList.Add(argument);
         }

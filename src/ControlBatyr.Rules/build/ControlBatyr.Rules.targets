@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <ControlBatyrRulesPath Condition="'$(ControlBatyrRulesPath)' == ''">$(MSBuildThisFileDirectory)../tools/net10.0/any/ControlBatyr.Rules.dll</ControlBatyrRulesPath>
+  </PropertyGroup>
+</Project>

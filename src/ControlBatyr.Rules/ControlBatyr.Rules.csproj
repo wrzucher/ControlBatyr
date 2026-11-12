@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Optional build-time shape and requirement-target validation for ControlBatyr.</Description>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../ControlBatyr.Inspection/ControlBatyr.Inspection.csproj" />
+    <None Include="build/ControlBatyr.Rules.targets" Pack="true" PackagePath="build/" />
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="tools/$(TargetFramework)/any/" />
+    <InternalsVisibleTo Include="ControlBatyr.Tests" />
+  </ItemGroup>
+</Project>
