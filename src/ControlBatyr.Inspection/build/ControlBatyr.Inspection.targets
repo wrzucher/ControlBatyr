@@ -9,7 +9,7 @@
     </PropertyGroup>
     <ItemGroup>
       <_ControlBatyrAssembly Include="$(ControlBatyrAssemblies)" />
-      <_ControlBatyrReference Include="@(ReferenceCopyLocalPaths)" />
+      <_ControlBatyrReference Include="@(ReferencePath);@(ReferenceCopyLocalPaths)" />
     </ItemGroup>
     <WriteLinesToFile File="$(IntermediateOutputPath)controlbatyr-assemblies.txt"
                       Lines="@(_ControlBatyrAssembly->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />

@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../sample/Game.Core/Game.Core.csproj" />
     <ProjectReference Include="../../src/ControlBatyr.Inspection/ControlBatyr.Inspection.csproj" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
     <PackageReference Include="xunit.v3" Version="4.0.3" />
