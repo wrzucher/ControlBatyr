@@ -21,3 +21,6 @@ jobs:
             exit 1
           fi
       - run: dotnet test --no-build
+      - name: Pack and verify local packages
+        shell: pwsh
+        run: ./tests/PackageSmoke/smoke.ps1

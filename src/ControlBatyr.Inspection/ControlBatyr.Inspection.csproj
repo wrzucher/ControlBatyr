@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>ControlBatyr.Inspection</PackageId>
+    <Description>Build-time business API documentation and shape rules for ControlBatyr cores and requirements.</Description>
+    <DevelopmentDependency>true</DevelopmentDependency>
     <OutputType>Exe</OutputType>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
