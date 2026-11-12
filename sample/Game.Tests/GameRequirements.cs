@@ -87,14 +87,14 @@ public sealed class GameRequirements : IAsyncLifetime
     public async Task Cancelled_bet_is_recorded_and_its_identifier_is_published()
     {
         var bet = await OpenBetAsync();
-        var notifications = new List<Guid>();
-        void ObserveCancellation(Guid betId) => notifications.Add(betId);
+        var notifications = new List<BetCancelledEventArgs>();
+        void ObserveCancellation(BetCancelledEventArgs payload) => notifications.Add(payload);
         publisher.BetCancelled += ObserveCancellation;
         try
         {
             await manager.CancelBetAsync(bet.Id, Ct);
 
-            Assert.Equal([bet.Id], notifications);
+            Assert.Equal([new BetCancelledEventArgs(bet.Id)], notifications);
             var cancelledBet = await RecordedBetAsync(bet.Id);
             Assert.Equal(BetState.Cancelled, cancelledBet.State);
         }
@@ -105,7 +105,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Cancellation_preview_explains_all_reasons_the_bet_cannot_be_withdrawn()
+    public async Task Cancellation_preview_explains_all_reasons_the_bet_cannot_be_cancelled()
     {
         var bet = await CancelledBetAsync();
         clock.SetUtcNow(bet.GameStartsAt.AddMinutes(1));
@@ -113,6 +113,25 @@ public sealed class GameRequirements : IAsyncLifetime
         var problems = await manager.CancelBetProblemAsync(bet.Id, Ct);
 
         Assert.Equal([ServiceErrorCode.BetAlreadyCancelled, ServiceErrorCode.GameStarted], problems);
+    }
+
+    [Fact]
+    public async Task Placed_bet_is_published_with_its_recorded_data()
+    {
+        var notifications = new List<BetPlacedEventArgs>();
+        void ObservePlacement(BetPlacedEventArgs payload) => notifications.Add(payload);
+        publisher.BetPlaced += ObservePlacement;
+        try
+        {
+            var bet = await OpenBetAsync();
+
+            Assert.Equal([new BetPlacedEventArgs(bet)], notifications);
+            Assert.Equal(bet, await RecordedBetAsync(bet.Id));
+        }
+        finally
+        {
+            publisher.BetPlaced -= ObservePlacement;
+        }
     }
 
     private Task<GameModel> UpcomingGameAsync() =>

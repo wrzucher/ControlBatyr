@@ -11,8 +11,8 @@ public sealed class BusinessApiDocumentation
     [Fact]
     public void Business_api_document_is_current()
     {
-        var markdown = BusinessApi.Generate(typeof(GameManager).Assembly, typeof(Bet).Assembly);
         var path = DocumentPath();
+        var markdown = BusinessApi.Generate(path, typeof(GameManager).Assembly, typeof(Bet).Assembly);
         var previous = File.Exists(path) ? File.ReadAllText(path).ReplaceLineEndings("\n") : null;
         if (previous == markdown)
         {
