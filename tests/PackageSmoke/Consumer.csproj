@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="ControlBatyr" Version="$(ControlBatyrPackageVersion)" />
     <PackageReference Include="ControlBatyr.Requirements" Version="$(ControlBatyrPackageVersion)" />
+    <PackageReference Include="ControlBatyr.Rules" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" Condition="'$(UseRules)' == 'true'" />
     <PackageReference Include="ControlBatyr.Inspection" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" />
   </ItemGroup>
 </Project>

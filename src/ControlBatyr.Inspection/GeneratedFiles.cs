@@ -4,6 +4,20 @@ internal static class GeneratedFiles
 {
     private const string Manifest = ".controlbatyr-generated";
 
+    internal static void Check(string directory, IReadOnlyList<(string RelativePath, string Markdown)> documents)
+    {
+        var expected = documents.Append((Manifest, string.Join('\n', documents.Select(document => document.RelativePath)
+            .Order(StringComparer.Ordinal)) + "\n"));
+        foreach (var (file, content) in expected)
+        {
+            var path = Path.Combine(directory, file);
+            if (!File.Exists(path) || File.ReadAllText(path).ReplaceLineEndings("\n") != content)
+            {
+                throw new InvalidOperationException("ControlBatyr documents are stale; rebuild and commit the generated documents and ownership manifest.");
+            }
+        }
+    }
+
     internal static void Write(string directory, IReadOnlyList<(string RelativePath, string Markdown)> documents)
     {
         var manifest = Path.Combine(directory, Manifest);

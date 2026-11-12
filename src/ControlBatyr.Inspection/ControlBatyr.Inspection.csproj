@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>ControlBatyr.Inspection</PackageId>
-    <Description>Build-time business API documentation and shape rules for ControlBatyr cores and requirements.</Description>
+    <Description>Build-time business API documentation for ControlBatyr cores and requirements.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
     <OutputType>Exe</OutputType>
     <IncludeBuildOutput>false</IncludeBuildOutput>
@@ -14,6 +14,7 @@
     <ProjectReference Include="../ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />
     <None Include="build/ControlBatyr.Inspection.targets" Pack="true" PackagePath="build/" />
     <InternalsVisibleTo Include="ControlBatyr.Tests" />
+    <InternalsVisibleTo Include="ControlBatyr.Rules" />
   </ItemGroup>
   <Target Name="PackInspectionTool">
     <ItemGroup>
