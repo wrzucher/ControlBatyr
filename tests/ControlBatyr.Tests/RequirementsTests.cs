@@ -50,9 +50,10 @@ public sealed class RequirementsTests
         var documents = Documents();
         var markdown = documents["gateway.md"];
         var all = markdown[markdown.IndexOf("#### All\n", StringComparison.Ordinal)..markdown.IndexOf("#### Echo\n", StringComparison.Ordinal)];
-        Assert.Contains("**Requirements**\n\nNo requirements", all);
+        Assert.DoesNotContain("**Requirements**", all);
+        Assert.DoesNotContain("No requirements", markdown);
         Assert.DoesNotContain("- Unmarked tests are omitted", markdown);
-        Assert.Contains("2 of 5 operations have requirements.", documents["index.md"]);
+        Assert.DoesNotContain("operations have requirements", documents["index.md"]);
     }
 
     [Fact]

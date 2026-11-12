@@ -31,7 +31,7 @@ internal static class Rules
         {
             if (!Role<ManagerAttribute>(requirement.Manager)
                 || requirement.Manager.IsDefined(typeof(PersistenceAttribute), false)
-                || !BusinessDocument.MethodsOf(requirement.Manager).Any(method => method.Name == requirement.Operation))
+                || !AssemblyReader.MethodsOf(requirement.Manager).Any(method => method.Name == requirement.Operation))
             {
                 Error("CB0007", requirement.Test,
                     $"requirement targets {requirement.Manager.FullName}.{requirement.Operation}: select a public operation of a [Manager].");

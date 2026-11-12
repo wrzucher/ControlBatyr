@@ -23,17 +23,19 @@ public sealed class GeneratedFilesTests : IDisposable
         Assert.Equal("domain.md\nindex.md\n", File.ReadAllText(Path.Combine(directory, ".controlbatyr-generated")));
     }
 
-    [Fact]
-    public void A_new_document_cannot_overwrite_a_handwritten_file_and_failure_preserves_the_old_set()
+    [Theory]
+    [InlineData("domain.md")]
+    [InlineData("business-api.json")]
+    public void A_new_document_cannot_overwrite_a_handwritten_file_and_failure_preserves_the_old_set(string file)
     {
         GeneratedFiles.Write(directory, [("index.md", "Old index\n")]);
-        File.WriteAllText(Path.Combine(directory, "domain.md"), "Handwritten domain\n");
+        File.WriteAllText(Path.Combine(directory, file), "Handwritten domain\n");
 
         var failure = Assert.Throws<InvalidOperationException>(() => GeneratedFiles.Write(directory,
-            [("index.md", "New index\n"), ("domain.md", "Generated domain\n")]));
+            [("index.md", "New index\n"), (file, "Generated domain\n")]));
 
-        Assert.Contains("unowned document: domain.md", failure.Message);
-        Assert.Equal("Handwritten domain\n", File.ReadAllText(Path.Combine(directory, "domain.md")));
+        Assert.Contains("unowned document: " + file, failure.Message);
+        Assert.Equal("Handwritten domain\n", File.ReadAllText(Path.Combine(directory, file)));
         Assert.Equal("Old index\n", File.ReadAllText(Path.Combine(directory, "index.md")));
         Assert.Equal("index.md\n", File.ReadAllText(Path.Combine(directory, ".controlbatyr-generated")));
     }
@@ -125,7 +127,7 @@ public sealed class GeneratedFilesTests : IDisposable
         var testAssembly = typeof(GeneratedFilesTests).Assembly.Location;
         var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "exec", "--runtimeconfig", Path.ChangeExtension(testAssembly, ".runtimeconfig.json"),
-            "--depsfile", Path.ChangeExtension(testAssembly, ".deps.json"), typeof(BusinessApi).Assembly.Location,
+            "--depsfile", Path.ChangeExtension(testAssembly, ".deps.json"), typeof(BusinessApiReader).Assembly.Location,
             directory, assemblyList, referenceList, invalidCore ? typeof(Rules).Assembly.Location : "", "false" })
         {
             start.ArgumentList.Add(argument);

@@ -14,8 +14,8 @@ function Invoke-Dotnet {
 New-Item -ItemType Directory -Path $feed, $consumer | Out-Null
 Invoke-Dotnet pack (Join-Path $repo 'ControlBatyr.slnx') -c Release -o $feed
 $packages = @(Get-ChildItem $feed -Filter '*.nupkg')
-if ($packages.Count -ne 4) { throw "Expected four packages, found $($packages.Count)." }
-foreach ($id in 'ControlBatyr', 'ControlBatyr.Requirements', 'ControlBatyr.Inspection', 'ControlBatyr.Rules') {
+if ($packages.Count -ne 5) { throw "Expected five packages, found $($packages.Count)." }
+foreach ($id in 'ControlBatyr', 'ControlBatyr.Connections', 'ControlBatyr.Requirements', 'ControlBatyr.Inspection', 'ControlBatyr.Rules') {
     $package = Join-Path $feed "$id.$version.nupkg"
     if (!(Test-Path $package)) { throw "Missing $id $version" }
     $archive = [IO.Compression.ZipFile]::OpenRead($package)
@@ -27,6 +27,9 @@ foreach ($id in 'ControlBatyr', 'ControlBatyr.Requirements', 'ControlBatyr.Inspe
             $metadata.license.InnerText -ne 'MIT' -or !$metadata.repository.url -or
             $metadata.readme -ne 'README.md' -or !$archive.GetEntry('README.md')) {
             throw "Missing or incorrect package metadata in $id."
+        }
+        if ($id -eq 'ControlBatyr' -and @($metadata.dependencies.group.dependency | Where-Object { $_ }).Count -ne 0) {
+            throw 'The attribute package must have no package dependencies.'
         }
         if ($id -eq 'ControlBatyr.Inspection' -and
             ($metadata.developmentDependency -ne 'true' -or
@@ -70,6 +73,15 @@ Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$versio
 $document = Join-Path $consumer 'docs/ticket.md'
 if (!(Test-Path (Join-Path $consumer 'docs/index.md')) -or !(Test-Path $document)) {
     throw 'The package build did not generate business API documents.'
+}
+$modelFile = Join-Path $consumer 'docs/business-api.json'
+if (!(Test-Path $modelFile) -or
+    !(Get-Content (Join-Path $consumer 'docs/.controlbatyr-generated')).Contains('business-api.json')) {
+    throw 'The model must be generated and owned by the manifest.'
+}
+$model = Get-Content $modelFile -Raw | ConvertFrom-Json
+if ($model.Domains[0].Operations[0].Node.Id -ne 'A:Consumer|M:PackageSmoke.TicketManager.Issue(System.Int32)') {
+    throw 'The model must expose the compiled operation identifier.'
 }
 $markdown = Get-Content $document -Raw
 foreach ($text in 'Issues a ticket with the requested identifier.', 'Ticket', 'Issued ticket keeps its identifier', '[Source]') {
@@ -126,5 +138,6 @@ if ((Test-Path (Join-Path $output 'ControlBatyr.Rules.dll')) -or
 }
 Write-Output 'PASS: generated index, manager, model and requirement documentation; no inspection runtime dependency.'
 $packages.Name | Write-Output
+Write-Output 'PASS: packaged Connections delivers events; base attributes have no package dependencies; JSON model is manifest-owned.'
 Write-Output 'Package smoke test passed.'
 exit 0

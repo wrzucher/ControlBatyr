@@ -1,0 +1,850 @@
+{
+  "domains": [
+    {
+      "name": "Account",
+      "node": {
+        "id": "A:Game.Core|T:Game.Core.AccountManager",
+        "name": "AccountManager",
+        "summary": "Holds players' funds and returns cancelled bet amounts.",
+        "remarks": "",
+        "sourceFile": "../../Game.Core/AccountManager.cs"
+      },
+      "operations": [
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.AccountManager.OpenAccountAsync(System.Guid,System.Decimal,System.Threading.CancellationToken)",
+            "name": "OpenAccount",
+            "summary": "Opens an account with the player's initial funds.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/AccountManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "playerId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": ""
+            },
+            {
+              "name": "initialBalance",
+              "type": {
+                "name": "decimal",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": ""
+            }
+          ],
+          "returnType": {
+            "name": "Account",
+            "modelId": "A:Game.Model|T:Game.Model.Account",
+            "arguments": [],
+            "suffix": ""
+          },
+          "returns": "",
+          "requirements": []
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.AccountManager.AccountAsync(System.Guid,System.Threading.CancellationToken)",
+            "name": "Account",
+            "summary": "Shows the player's available funds.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/AccountManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "playerId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": ""
+            }
+          ],
+          "returnType": {
+            "name": "Account",
+            "modelId": "A:Game.Model|T:Game.Model.Account",
+            "arguments": [],
+            "suffix": ""
+          },
+          "returns": "",
+          "requirements": []
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.AccountManager.RefundBetAsync(System.Guid,System.Guid,System.Decimal,System.Threading.CancellationToken)",
+            "name": "RefundBet",
+            "summary": "Returns the bet amount to the player after cancellation.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/AccountManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "playerId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": ""
+            },
+            {
+              "name": "betId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": ""
+            },
+            {
+              "name": "amount",
+              "type": {
+                "name": "decimal",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": ""
+            }
+          ],
+          "returnType": {
+            "name": "void",
+            "arguments": [],
+            "suffix": ""
+          },
+          "returns": "",
+          "requirements": [
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.AccountRequirements.Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account",
+                "name": "Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/AccountRequirements.cs"
+              }
+            }
+          ]
+        }
+      ],
+      "publishers": []
+    },
+    {
+      "name": "Game",
+      "node": {
+        "id": "A:Game.Core|T:Game.Core.GameManager",
+        "name": "GameManager",
+        "summary": "Lets players place bets and cancel them until their game starts.",
+        "remarks": "",
+        "sourceFile": "../../Game.Core/GameManager.cs"
+      },
+      "operations": [
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.GameManager.CreateGameAsync(System.String,System.DateTimeOffset,System.Threading.CancellationToken)",
+            "name": "CreateGame",
+            "summary": "Sets when the game starts and bets can no longer be cancelled.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/GameManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "name",
+              "type": {
+                "name": "string",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "The title players use to recognise the game."
+            },
+            {
+              "name": "startsAt",
+              "type": {
+                "name": "DateTimeOffset",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "When cancellation closes for every bet on this game."
+            }
+          ],
+          "returnType": {
+            "name": "Game",
+            "modelId": "A:Game.Model|T:Game.Model.Game",
+            "arguments": [],
+            "suffix": ""
+          },
+          "returns": "The recorded game, including the identifier used to place bets.",
+          "requirements": []
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.GameManager.PlaceBetAsync(System.Guid,System.Guid,System.Decimal,System.Threading.CancellationToken)",
+            "name": "PlaceBet",
+            "summary": "Places a player's bet on an existing game.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/GameManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "gameId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "The game the player chose."
+            },
+            {
+              "name": "playerId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "The player who owns the bet."
+            },
+            {
+              "name": "amount",
+              "type": {
+                "name": "decimal",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "The amount the player bets."
+            }
+          ],
+          "returnType": {
+            "name": "Bet",
+            "modelId": "A:Game.Model|T:Game.Model.Bet",
+            "arguments": [],
+            "suffix": ""
+          },
+          "returns": "The recorded bet in its initial open state.",
+          "requirements": [
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.GameRequirements.Placed_bet_preserves_the_player_game_and_amount",
+                "name": "Placed_bet_preserves_the_player_game_and_amount",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/GameRequirements.cs"
+              }
+            },
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.GameRequirements.Placed_bet_is_published_with_its_recorded_data",
+                "name": "Placed_bet_is_published_with_its_recorded_data",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/GameRequirements.cs"
+              }
+            }
+          ]
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.GameManager.CancelBetProblemAsync(System.Guid,System.Threading.CancellationToken)",
+            "name": "CancelBetProblem",
+            "summary": "Explains why the player cannot cancel the bet.",
+            "remarks": "This preview does not change the bet. CancelBet checks again before cancelling it.",
+            "sourceFile": "../../Game.Core/GameManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "betId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "The bet whose cancellation the player is considering."
+            }
+          ],
+          "returnType": {
+            "name": "IReadOnlyList",
+            "arguments": [
+              {
+                "name": "ServiceErrorCode",
+                "modelId": "A:Game.Model|T:Game.Model.ServiceErrorCode",
+                "arguments": [],
+                "suffix": ""
+              }
+            ],
+            "suffix": ""
+          },
+          "returns": "All current reasons preventing cancellation; empty when cancellation is allowed.",
+          "requirements": [
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.GameRequirements.Cancellation_preview_explains_all_reasons_the_bet_cannot_be_cancelled",
+                "name": "Cancellation_preview_explains_all_reasons_the_bet_cannot_be_cancelled",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/GameRequirements.cs"
+              }
+            }
+          ]
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.GameManager.CancelBetAsync(System.Guid,System.Threading.CancellationToken)",
+            "name": "CancelBet",
+            "summary": "Lets the player cancel an open bet before the game starts.",
+            "remarks": "Listeners are notified after the cancellation has been recorded.",
+            "sourceFile": "../../Game.Core/GameManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "betId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "The bet the player wants to cancel."
+            }
+          ],
+          "returnType": {
+            "name": "void",
+            "arguments": [],
+            "suffix": ""
+          },
+          "returns": "",
+          "requirements": [
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.AccountRequirements.Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account",
+                "name": "Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/AccountRequirements.cs"
+              }
+            },
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.GameRequirements.Open_bet_can_be_cancelled_before_the_game_starts",
+                "name": "Open_bet_can_be_cancelled_before_the_game_starts",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/GameRequirements.cs"
+              }
+            },
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.GameRequirements.Bet_cannot_be_cancelled_once_the_game_starts",
+                "name": "Bet_cannot_be_cancelled_once_the_game_starts",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/GameRequirements.cs"
+              }
+            },
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.GameRequirements.Cancelled_bet_cannot_be_cancelled_again",
+                "name": "Cancelled_bet_cannot_be_cancelled_again",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/GameRequirements.cs"
+              }
+            },
+            {
+              "node": {
+                "id": "A:Game.Tests|M:Game.Tests.GameRequirements.Cancelled_bet_is_recorded_and_its_identifier_is_published",
+                "name": "Cancelled_bet_is_recorded_and_its_identifier_is_published",
+                "summary": "",
+                "remarks": "",
+                "sourceFile": "../../Game.Tests/GameRequirements.cs"
+              }
+            }
+          ]
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|M:Game.Core.GameManager.BetAsync(System.Guid,System.Threading.CancellationToken)",
+            "name": "Bet",
+            "summary": "Lets the player see the bet's current state.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/GameManager.cs"
+          },
+          "parameters": [
+            {
+              "name": "betId",
+              "type": {
+                "name": "Guid",
+                "arguments": [],
+                "suffix": ""
+              },
+              "description": "The bet to look up."
+            }
+          ],
+          "returnType": {
+            "name": "Bet",
+            "modelId": "A:Game.Model|T:Game.Model.Bet",
+            "arguments": [],
+            "suffix": "?"
+          },
+          "returns": "The current bet, or null when betId is unknown.",
+          "requirements": []
+        }
+      ],
+      "publishers": [
+        {
+          "node": {
+            "id": "A:Game.Core|T:Game.Core.GameEventPublisher",
+            "name": "GameEventPublisher",
+            "summary": "Announces changes to player bets after they have been recorded.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/GameEventPublisher.cs"
+          },
+          "events": [
+            {
+              "node": {
+                "id": "A:Game.Core|E:Game.Core.GameEventPublisher.BetPlaced",
+                "name": "BetPlaced",
+                "summary": "The player's bet has been placed.",
+                "remarks": "",
+                "sourceFile": "../../Game.Core/GameEventPublisher.cs"
+              },
+              "payloads": [
+                {
+                  "name": "BetPlacedEventArgs",
+                  "modelId": "A:Game.Model|T:Game.Model.BetPlacedEventArgs",
+                  "arguments": [],
+                  "suffix": ""
+                }
+              ]
+            },
+            {
+              "node": {
+                "id": "A:Game.Core|E:Game.Core.GameEventPublisher.BetCancelled",
+                "name": "BetCancelled",
+                "summary": "The player's bet has been cancelled.",
+                "remarks": "",
+                "sourceFile": "../../Game.Core/GameEventPublisher.cs"
+              },
+              "payloads": [
+                {
+                  "name": "BetCancelledEventArgs",
+                  "modelId": "A:Game.Model|T:Game.Model.BetCancelledEventArgs",
+                  "arguments": [],
+                  "suffix": ""
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "models": [
+    {
+      "node": {
+        "id": "A:Game.Model|T:Game.Model.Account",
+        "name": "Account",
+        "summary": "The funds available to a player.",
+        "remarks": "",
+        "sourceFile": "../../Game.Model/Account.cs"
+      },
+      "isEnum": false,
+      "properties": [
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Account.PlayerId",
+            "name": "PlayerId",
+            "summary": "",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Account.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Account.Balance",
+            "name": "Balance",
+            "summary": "",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Account.cs"
+          },
+          "type": {
+            "name": "decimal",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        }
+      ],
+      "methods": [],
+      "values": []
+    },
+    {
+      "node": {
+        "id": "A:Game.Model|T:Game.Model.Bet",
+        "name": "Bet",
+        "summary": "A player's bet on a game, including its current cancellation state.",
+        "remarks": "",
+        "sourceFile": "../../Game.Model/Bet.cs"
+      },
+      "isEnum": false,
+      "properties": [
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Bet.Id",
+            "name": "Id",
+            "summary": "Identifies the bet for later lookup or cancellation.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Bet.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Bet.GameId",
+            "name": "GameId",
+            "summary": "The game the player chose.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Bet.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Bet.PlayerId",
+            "name": "PlayerId",
+            "summary": "The player who placed the bet.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Bet.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Bet.Amount",
+            "name": "Amount",
+            "summary": "The amount the player bet.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Bet.cs"
+          },
+          "type": {
+            "name": "decimal",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Bet.State",
+            "name": "State",
+            "summary": "Whether the bet is still open or has been cancelled.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Bet.cs"
+          },
+          "type": {
+            "name": "BetState",
+            "modelId": "A:Game.Model|T:Game.Model.BetState",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Bet.GameStartsAt",
+            "name": "GameStartsAt",
+            "summary": "The deadline for cancelling the bet.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Bet.cs"
+          },
+          "type": {
+            "name": "DateTimeOffset",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Bet.IsOpen",
+            "name": "IsOpen",
+            "summary": "Whether the bet is still open.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Bet.cs"
+          },
+          "type": {
+            "name": "bool",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": true
+        }
+      ],
+      "methods": [],
+      "values": []
+    },
+    {
+      "node": {
+        "id": "A:Game.Model|T:Game.Model.BetCancelledEventArgs",
+        "name": "BetCancelledEventArgs",
+        "summary": "Identifies the bet whose cancellation has been recorded.",
+        "remarks": "",
+        "sourceFile": "../../Game.Model/BetCancelledEventArgs.cs"
+      },
+      "isEnum": false,
+      "properties": [
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.BetCancelledEventArgs.BetId",
+            "name": "BetId",
+            "summary": "The cancelled bet, for lookup or related updates.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/BetCancelledEventArgs.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.BetCancelledEventArgs.PlayerId",
+            "name": "PlayerId",
+            "summary": "The player who receives the refunded bet amount.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/BetCancelledEventArgs.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.BetCancelledEventArgs.Amount",
+            "name": "Amount",
+            "summary": "The bet amount to return.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/BetCancelledEventArgs.cs"
+          },
+          "type": {
+            "name": "decimal",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        }
+      ],
+      "methods": [],
+      "values": []
+    },
+    {
+      "node": {
+        "id": "A:Game.Model|T:Game.Model.BetPlacedEventArgs",
+        "name": "BetPlacedEventArgs",
+        "summary": "The recorded bet announced to listeners.",
+        "remarks": "",
+        "sourceFile": "../../Game.Model/BetPlacedEventArgs.cs"
+      },
+      "isEnum": false,
+      "properties": [
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.BetPlacedEventArgs.Bet",
+            "name": "Bet",
+            "summary": "The bet as recorded when it was placed.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/BetPlacedEventArgs.cs"
+          },
+          "type": {
+            "name": "Bet",
+            "modelId": "A:Game.Model|T:Game.Model.Bet",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        }
+      ],
+      "methods": [],
+      "values": []
+    },
+    {
+      "node": {
+        "id": "A:Game.Model|T:Game.Model.BetState",
+        "name": "BetState",
+        "summary": "The lifecycle of a player's bet.",
+        "remarks": ""
+      },
+      "isEnum": true,
+      "properties": [],
+      "methods": [],
+      "values": [
+        {
+          "node": {
+            "id": "A:Game.Model|F:Game.Model.BetState.Open",
+            "name": "Open",
+            "summary": "The bet remains open.",
+            "remarks": ""
+          },
+          "value": "0"
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|F:Game.Model.BetState.Cancelled",
+            "name": "Cancelled",
+            "summary": "The player has cancelled the bet.",
+            "remarks": ""
+          },
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "node": {
+        "id": "A:Game.Model|T:Game.Model.Game",
+        "name": "Game",
+        "summary": "A scheduled game that players can bet on.",
+        "remarks": "",
+        "sourceFile": "../../Game.Model/Game.cs"
+      },
+      "isEnum": false,
+      "properties": [
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Game.Id",
+            "name": "Id",
+            "summary": "Identifies the game when placing a bet.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Game.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Game.Name",
+            "name": "Name",
+            "summary": "The title shown to players.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Game.cs"
+          },
+          "type": {
+            "name": "string",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|P:Game.Model.Game.StartsAt",
+            "name": "StartsAt",
+            "summary": "When play begins and cancellation closes.",
+            "remarks": "",
+            "sourceFile": "../../Game.Model/Game.cs"
+          },
+          "type": {
+            "name": "DateTimeOffset",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        }
+      ],
+      "methods": [],
+      "values": []
+    },
+    {
+      "node": {
+        "id": "A:Game.Model|T:Game.Model.ServiceErrorCode",
+        "name": "ServiceErrorCode",
+        "summary": "Reasons a requested game operation cannot proceed.",
+        "remarks": ""
+      },
+      "isEnum": true,
+      "properties": [],
+      "methods": [],
+      "values": [
+        {
+          "node": {
+            "id": "A:Game.Model|F:Game.Model.ServiceErrorCode.GameNotFound",
+            "name": "GameNotFound",
+            "summary": "The selected game does not exist.",
+            "remarks": ""
+          },
+          "value": "10"
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|F:Game.Model.ServiceErrorCode.GameStarted",
+            "name": "GameStarted",
+            "summary": "The cancellation deadline has passed.",
+            "remarks": ""
+          },
+          "value": "11"
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|F:Game.Model.ServiceErrorCode.BetNotFound",
+            "name": "BetNotFound",
+            "summary": "The selected bet does not exist.",
+            "remarks": ""
+          },
+          "value": "20"
+        },
+        {
+          "node": {
+            "id": "A:Game.Model|F:Game.Model.ServiceErrorCode.BetAlreadyCancelled",
+            "name": "BetAlreadyCancelled",
+            "summary": "The bet has already been cancelled.",
+            "remarks": ""
+          },
+          "value": "21"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "node": {
+        "id": "A:Game.Core|M:Game.Core.GameAccountConnections.RefundBetAsync(Game.Core.AccountManager,Game.Model.BetCancelledEventArgs)",
+        "name": "RefundBetAsync",
+        "summary": "Return the bet amount to the player's account after cancellation.",
+        "remarks": "",
+        "sourceFile": "../../Game.Core/GameAccountConnections.cs"
+      },
+      "eventId": "A:Game.Core|E:Game.Core.GameEventPublisher.BetCancelled",
+      "targetDomainId": "A:Game.Core|T:Game.Core.AccountManager"
+    }
+  ]
+}

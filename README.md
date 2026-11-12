@@ -7,15 +7,15 @@ Experimental repository. The design pattern is in [docs/concept.md](docs/concept
 What we do and in what order is in [docs/plan.md](docs/plan.md). Developer rules are in
 [AGENTS.md](AGENTS.md).
 
-The sample regenerates its business API during `dotnet build`. Commit the generated documents, including
-the `.controlbatyr-generated` ownership manifest, alongside code changes. Document checking is off by
-default; this repository enables it in CI.
+The sample regenerates its business API during `dotnet build`, including a typed `business-api.json` model.
+Commit the generated documents and `.controlbatyr-generated` ownership manifest alongside code changes.
+Document checking is off by default; this repository enables it in CI.
 Handwritten files can share the documentation folder; generation only replaces or removes files in its
 manifest and refuses to overwrite an existing unowned document.
 
 ## Getting started
 
-Use .NET 10. Add `ControlBatyr` to the core and model projects that use its attributes and connections:
+Use .NET 10. Add `ControlBatyr` to the core and model projects that use its attributes:
 
 ```xml
 <PackageReference Include="ControlBatyr" Version="0.1.0" />
@@ -68,7 +68,13 @@ Mark test methods with `[Requirement<GameManager>(nameof(GameManager.CancelBetAs
 `ControlBatyr.Requirements` module. The test summary, or its name with underscores replaced by spaces,
 appears under the operation with a source link. Unmarked tests are omitted.
 
-For `[On<TPublisher>]` connections, register publishers as singletons, managers as scoped services and logging.
+For `[On<TPublisher>]` connections, add this reference to the startup project:
+
+```xml
+<PackageReference Include="ControlBatyr.Connections" Version="0.1.0" />
+```
+
+Register publishers as singletons, managers as scoped services and logging.
 After building the service provider, call once at startup:
 
 ```csharp
@@ -87,7 +93,7 @@ The sample runs both rules and generation in `Game.Tests`; `Game.Core` does not 
 Generation runs after every build in a separate .NET 10 process, fails the build on error, and leaves
 unchanged files unwritten. The tool needs a .NET runtime compatible with the inspected product.
 
-No packages are published. Build and verify all four locally with:
+No packages are published. Build and verify all five locally with:
 
 ```powershell
 dotnet pack -c Release -o artifacts/packages
