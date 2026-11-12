@@ -29,6 +29,10 @@ Sets when the game starts and bets can no longer be cancelled.
 
 The recorded game, including the identifier used to place bets.
 
+**Requirements**
+
+No requirements
+
 <a id="type-game-core-gamemanager-placebetasync"></a>
 
 #### PlaceBet
@@ -46,6 +50,11 @@ Places a player's bet on an existing game.
 **Returns:** [Bet](#type-game-model-bet)
 
 The recorded bet in its initial open state.
+
+**Requirements**
+
+- Placed bet preserves the player game and amount — [Source](../../Game.Tests/GameRequirements.cs)
+- Placed bet is published with its recorded data — [Source](../../Game.Tests/GameRequirements.cs)
 
 <a id="type-game-core-gamemanager-cancelbetproblemasync"></a>
 
@@ -67,6 +76,10 @@ All current reasons preventing cancellation; empty when cancellation is allowed.
 
 This preview does not change the bet. CancelBet checks again before cancelling it.
 
+**Requirements**
+
+- Cancellation preview explains all reasons the bet cannot be cancelled — [Source](../../Game.Tests/GameRequirements.cs)
+
 <a id="type-game-core-gamemanager-cancelbetasync"></a>
 
 #### CancelBet
@@ -83,6 +96,14 @@ Lets the player cancel an open bet before the game starts.
 
 Listeners are notified after the cancellation has been recorded.
 
+**Requirements**
+
+- Cancelling a bet refunds its bet amount to its players account — [Source](../../Game.Tests/AccountRequirements.cs)
+- Open bet can be cancelled before the game starts — [Source](../../Game.Tests/GameRequirements.cs)
+- Bet cannot be cancelled once the game starts — [Source](../../Game.Tests/GameRequirements.cs)
+- Cancelled bet cannot be cancelled again — [Source](../../Game.Tests/GameRequirements.cs)
+- Cancelled bet is recorded and its identifier is published — [Source](../../Game.Tests/GameRequirements.cs)
+
 <a id="type-game-core-gamemanager-betasync"></a>
 
 #### Bet
@@ -98,6 +119,10 @@ Lets the player see the bet's current state.
 **Returns:** [Bet](#type-game-model-bet)?
 
 The current bet, or null when betId is unknown.
+
+**Requirements**
+
+No requirements
 
 ## Events
 

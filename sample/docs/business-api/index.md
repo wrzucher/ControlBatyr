@@ -4,7 +4,11 @@
 
 - [Account](account.md) — Holds players' funds and returns cancelled bet amounts.
 
+  1 of 3 operations have requirements.
+
 - [Game](game.md) — Lets players place bets and cancel them until their game starts.
+
+  3 of 5 operations have requirements.
 
 ## Connections
 

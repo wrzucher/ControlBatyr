@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../ControlBatyr/ControlBatyr.csproj" />
+    <ProjectReference Include="../ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />
     <None Include="build/ControlBatyr.Inspection.targets" Pack="true" PackagePath="build/" />
     <InternalsVisibleTo Include="ControlBatyr.Tests" />
   </ItemGroup>

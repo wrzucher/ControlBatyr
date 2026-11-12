@@ -1,3 +1,4 @@
+using ControlBatyr.Requirements;
 using Game.Core;
 using Game.Model;
 using Game.Persistence;
@@ -32,6 +33,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.PlaceBetAsync))]
     public async Task Placed_bet_preserves_the_player_game_and_amount()
     {
         var game = await UpcomingGameAsync();
@@ -49,6 +51,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.CancelBetAsync))]
     public async Task Open_bet_can_be_cancelled_before_the_game_starts()
     {
         var bet = await OpenBetAsync();
@@ -61,6 +64,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.CancelBetAsync))]
     public async Task Bet_cannot_be_cancelled_once_the_game_starts()
     {
         var bet = await OpenBetAsync();
@@ -73,6 +77,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.CancelBetAsync))]
     public async Task Cancelled_bet_cannot_be_cancelled_again()
     {
         var bet = await CancelledBetAsync();
@@ -84,6 +89,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.CancelBetAsync))]
     public async Task Cancelled_bet_is_recorded_and_its_identifier_is_published()
     {
         var bet = await OpenBetAsync();
@@ -105,6 +111,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.CancelBetProblemAsync))]
     public async Task Cancellation_preview_explains_all_reasons_the_bet_cannot_be_cancelled()
     {
         var bet = await CancelledBetAsync();
@@ -116,6 +123,7 @@ public sealed class GameRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.PlaceBetAsync))]
     public async Task Placed_bet_is_published_with_its_recorded_data()
     {
         var notifications = new List<BetPlacedEventArgs>();

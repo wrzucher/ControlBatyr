@@ -18,6 +18,7 @@ internal sealed class BusinessDocument
     private readonly Dictionary<Type, string> modelFiles = [];
     private readonly Domain[] domains;
     private readonly Connection[] connections;
+    private readonly (Type Manager, string Operation, MethodInfo Test)[] requirements;
 
     private sealed record Domain(Type Manager, Type[] Publishers, HashSet<Type> Models)
     {
@@ -31,6 +32,7 @@ internal sealed class BusinessDocument
         var types = assemblies.Distinct().OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)
             .SelectMany(assembly => assembly.GetTypes().OrderBy(type => type.MetadataToken))
             .Where(type => !Excluded(type)).ToArray();
+        requirements = RequirementLinks.Find(types).ToArray();
         domains = types.Where(type => type.IsDefined(typeof(ManagerAttribute), false)).Select(manager =>
         {
             models.Clear();
@@ -76,6 +78,8 @@ internal sealed class BusinessDocument
         foreach (var domain in domains)
         {
             Text($"- [{domain.Name}]({domain.File}) — {comments.Summary(domain.Manager)}");
+            var operations = MethodsOf(domain.Manager).ToArray();
+            Text($"  {operations.Count(method => requirements.Any(item => item.Manager == domain.Manager && item.Operation == method.Name))} of {operations.Length} operations have requirements.");
         }
         Connections(connections);
         documents.Add(Finish());
@@ -270,19 +274,22 @@ internal sealed class BusinessDocument
         {
             Text($"<a id=\"{Anchor(type)}\"></a>");
             Text($"### {DisplayName(type)}");
-            if (documentPath is not null && SourceFiles.Find(type) is { } sourcePath)
-            {
-                var relative = Path.GetRelativePath(Path.GetDirectoryName(Path.GetFullPath(documentPath))!, sourcePath);
-                var url = string.Join("/", relative.Replace('\\', '/').Split('/').Select(Uri.EscapeDataString));
-                Text($"[Source]({url})");
-            }
+            if (SourceLink(type) is { } link) Text(link);
             Text(comments.Summary(type));
             Remarks(type);
             body(type);
         }
     }
 
-    private static IEnumerable<MethodInfo> MethodsOf(Type type) => type.GetMethods(PublicMembers)
+    private string? SourceLink(MemberInfo member)
+    {
+        if (documentPath is null || SourceFiles.Find(member) is not { } sourcePath) return null;
+        var relative = Path.GetRelativePath(Path.GetDirectoryName(Path.GetFullPath(documentPath))!, sourcePath);
+        var url = string.Join("/", relative.Replace('\\', '/').Split('/').Select(Uri.EscapeDataString));
+        return $"[Source]({url})";
+    }
+
+    internal static IEnumerable<MethodInfo> MethodsOf(Type type) => type.GetMethods(PublicMembers)
         .Where(method => !method.IsSpecialName && method.DeclaringType != typeof(object)
             && !method.IsDefined(typeof(CompilerGeneratedAttribute), false))
         .OrderBy(method => method.MetadataToken);
@@ -337,6 +344,23 @@ internal sealed class BusinessDocument
                 Text(returns);
             }
             Remarks(method);
+            if (type.IsDefined(typeof(ManagerAttribute), false))
+            {
+                Text("**Requirements**");
+                var tests = requirements.Where(item => item.Manager == type && item.Operation == method.Name).ToArray();
+                if (tests.Length == 0)
+                {
+                    Text("No requirements");
+                }
+                foreach (var item in tests)
+                {
+                    var text = comments.Summary(item.Test);
+                    if (text.Length == 0) text = item.Test.Name.Replace('_', ' ');
+                    var source = SourceLink(item.Test);
+                    Line($"- {text}" + (source is null ? "" : $" — {source}"));
+                }
+                if (tests.Length > 0) Line();
+            }
         }
     }
 
