@@ -12,16 +12,13 @@ internal sealed class AssemblyReader
     private readonly XmlComments comments = new();
     private readonly NullabilityInfoContext nullability = new();
     private readonly string? documentDirectory;
-    private readonly Dictionary<Type, string> modelFiles = [];
     private readonly Domain[] domains;
     private readonly Connection[] connections;
     private readonly (Type Manager, string Operation, MethodInfo Test)[] requirements;
-    private readonly List<DocumentLocation> locations = [];
 
     private sealed record Domain(Type Manager, Type[] Publishers, HashSet<Type> Models)
     {
         internal string Name => Manager.Name.EndsWith("Manager", StringComparison.Ordinal) ? Manager.Name[..^7] : Manager.Name;
-        internal string File => Name.ToLowerInvariant() + ".md";
     }
 
     internal AssemblyReader(Assembly[] assemblies, string? documentDirectory)
@@ -44,19 +41,8 @@ internal sealed class AssemblyReader
             }
             return new Domain(manager, publishers, [.. models]);
         }).ToArray();
-        var duplicate = domains.GroupBy(domain => domain.File).FirstOrDefault(group => group.Count() > 1
-            || group.Key is "index.md" or "shared.md");
-        if (duplicate is not null)
-        {
-            throw new InvalidOperationException($"Domain document path is not unique: {duplicate.Key}.");
-        }
         models.Clear();
         models.UnionWith(domains.SelectMany(domain => domain.Models));
-        foreach (var model in models)
-        {
-            var owners = domains.Where(domain => domain.Models.Contains(model)).ToArray();
-            modelFiles[model] = owners.Length == 1 ? owners[0].File : "shared.md";
-        }
         connections = Connection.Find(assemblies);
         foreach (var connection in connections)
         {
@@ -74,42 +60,24 @@ internal sealed class AssemblyReader
         var modelNodes = models.OrderBy(type => type.Assembly.FullName, StringComparer.Ordinal)
             .ThenBy(type => type.MetadataToken).Select(Model).ToImmutableArray();
         var connectionNodes = connections.Select(connection => new BusinessConnection(
-            Node(connection.Method, domains.Single(domain => domain.Manager == connection.Manager).File, Anchor(connection.Manager)),
+            Node(connection.Method),
             Id(connection.Event), Id(connection.Manager))).ToImmutableArray();
-        return new(domainNodes, modelNodes, connectionNodes,
-            [.. locations.DistinctBy(location => location.Id).OrderBy(location => location.Id, StringComparer.Ordinal)]);
+        return new(domainNodes, modelNodes, connectionNodes);
     }
 
     private BusinessDomain DomainModel(Domain domain)
     {
-        var publishers = domain.Publishers.Select(publisher => new BusinessPublisher(Node(publisher, domain.File),
-            [.. EventsOf(publisher).Select(item => new BusinessEvent(Node(item, domain.File), Payloads(item)))]));
-        return new(domain.Name, Node(domain.Manager, domain.File), Operations(domain.Manager, domain.File), [.. publishers]);
+        var publishers = domain.Publishers.Select(publisher => new BusinessPublisher(Node(publisher),
+            [.. EventsOf(publisher).Select(item => new BusinessEvent(Node(item), Payloads(item)))]));
+        return new(domain.Name, Node(domain.Manager), Operations(domain.Manager), [.. publishers]);
     }
 
-    private BusinessNode Node(MemberInfo member, string file, string? anchor = null)
+    private BusinessNode Node(MemberInfo member)
     {
-        anchor ??= MemberAnchor(member);
-        locations.Add(new(Id(member), file, anchor));
         var source = documentDirectory is null ? null : SourceFiles.Find(member);
         return new(Id(member), member is Type item ? DisplayName(item) : member.Name,
             comments.Summary(member), comments.Tag(member, "remarks"), source is null ? null
                 : Path.GetRelativePath(Path.GetFullPath(documentDirectory!), source).Replace('\\', '/'));
-    }
-
-    private static string MemberAnchor(MemberInfo member)
-    {
-        if (member is Type type)
-        {
-            return Anchor(type);
-        }
-        var anchor = Anchor(member.DeclaringType!) + "-" + member.Name.ToLowerInvariant();
-        if (member is MethodInfo method && MethodsOf(method.DeclaringType!).Count(item => item.Name == method.Name) > 1)
-        {
-            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Id(member)));
-            anchor += "-" + Convert.ToHexStringLower(hash)[..8];
-        }
-        return anchor;
     }
 
     private static string Id(MemberInfo member)
@@ -119,34 +87,33 @@ internal sealed class AssemblyReader
 
     private BusinessModel Model(Type type)
     {
-        var file = modelFiles[type];
-        var node = Node(type, file);
+        var node = Node(type);
         if (type.IsEnum)
         {
             var values = type.GetFields(BindingFlags.Public | BindingFlags.Static)
                 .OrderBy(field => Convert.ToDecimal(field.GetRawConstantValue(), CultureInfo.InvariantCulture))
-                .ThenBy(field => field.MetadataToken).Select(field => new BusinessEnumValue(Node(field, file, Anchor(type)),
+                .ThenBy(field => field.MetadataToken).Select(field => new BusinessEnumValue(Node(field),
                     Convert.ToString(field.GetRawConstantValue(), CultureInfo.InvariantCulture)!)).ToImmutableArray();
             return new(node, true, [], [], values);
         }
         var properties = DataOf(type).Select(member =>
         {
             var info = member is PropertyInfo property ? nullability.Create(property) : nullability.Create((FieldInfo)member);
-            return new BusinessProperty(Node(member, file, Anchor(type)), Reference(info.Type, info), Computed(member));
+            return new BusinessProperty(Node(member), Reference(info.Type, info), Computed(member));
         }).ToImmutableArray();
-        return new(node, false, properties, Operations(type, file), []);
+        return new(node, false, properties, Operations(type), []);
     }
 
-    private ImmutableArray<BusinessOperation> Operations(Type type, string file)
+    private ImmutableArray<BusinessOperation> Operations(Type type)
     {
-        return [.. MethodsOf(type).Select(method => Operation(type, method, file))];
+        return [.. MethodsOf(type).Select(method => Operation(type, method))];
     }
 
-    private BusinessOperation Operation(Type owner, MethodInfo method, string file)
+    private BusinessOperation Operation(Type owner, MethodInfo method)
     {
         var result = ReturnType(method.ReturnType);
         var info = nullability.Create(method.ReturnParameter);
-        var node = Node(method, file);
+        var node = Node(method);
         var name = method.Name;
         if (result != method.ReturnType)
         {
@@ -163,7 +130,7 @@ internal sealed class AssemblyReader
         var parameters = ParametersOf(method).Select(parameter => new BusinessParameter(parameter.Name!,
             Reference(parameter.ParameterType, nullability.Create(parameter)), comments.Tag(method, "param", parameter.Name)));
         var tests = requirements.Where(item => owner.IsDefined(typeof(ManagerAttribute), false) && item.Manager == owner && item.Operation == method.Name)
-            .Select(item => new BusinessRequirement(Node(item.Test, file, MemberAnchor(method))));
+            .Select(item => new BusinessRequirement(Node(item.Test)));
         return new(node with { Name = name }, [.. parameters], Reference(result, info), comments.Tag(method, "returns"), [.. tests]);
     }
 
@@ -326,10 +293,5 @@ internal sealed class AssemblyReader
     private static string NullableSuffix(Type type, NullabilityInfo? info)
     {
         return !type.IsValueType && info?.ReadState == NullabilityState.Nullable ? "?" : "";
-    }
-
-    private static string Anchor(Type type)
-    {
-        return "type-" + type.FullName!.Replace('.', '-').Replace('+', '-').Replace('`', '-').ToLowerInvariant();
     }
 }

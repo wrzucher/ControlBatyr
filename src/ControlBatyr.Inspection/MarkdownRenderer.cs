@@ -6,8 +6,126 @@ namespace ControlBatyr.Inspection;
 internal sealed class MarkdownRenderer(BusinessApiModel model)
 {
     private readonly StringBuilder output = new();
-    private readonly Dictionary<string, DocumentLocation> locations = model.Locations.ToDictionary(location => location.Id);
+    private readonly Dictionary<string, DocumentLocation> locations = Locations(model);
     private string currentFile = "index.md";
+
+    internal sealed record DocumentLocation(string Id, string File, string Anchor);
+
+    internal static Dictionary<string, DocumentLocation> Locations(BusinessApiModel model)
+    {
+        var result = new Dictionary<string, DocumentLocation>();
+        var models = model.Models.ToDictionary(item => item.Node.Id);
+        var owners = models.Keys.ToDictionary(id => id, _ => new HashSet<string>());
+        var files = new HashSet<string>(StringComparer.Ordinal) { "index.md", "shared.md" };
+        foreach (var domain in model.Domains)
+        {
+            var file = domain.Name.ToLowerInvariant() + ".md";
+            if (!files.Add(file))
+            {
+                throw new InvalidOperationException($"Domain document path is not unique: {file}.");
+            }
+            Add(domain.Node, file, TypeAnchor(domain.Node.Id));
+            Operations(domain.Operations, file);
+            foreach (var publisher in domain.Publishers)
+            {
+                Add(publisher.Node, file, TypeAnchor(publisher.Node.Id));
+                foreach (var item in publisher.Events)
+                {
+                    Add(item.Node, file, MemberAnchor(item.Node.Id));
+                    foreach (var payload in item.Payloads)
+                    {
+                        Discover(payload, file);
+                    }
+                }
+            }
+            foreach (var operation in domain.Operations)
+            {
+                DiscoverOperation(operation, file);
+            }
+        }
+        foreach (var item in model.Models)
+        {
+            var file = owners[item.Node.Id].Count == 1 ? owners[item.Node.Id].Single() : "shared.md";
+            var anchor = TypeAnchor(item.Node.Id);
+            Add(item.Node, file, anchor);
+            foreach (var node in item.Properties.Select(property => property.Node).Concat(item.Values.Select(value => value.Node)))
+            {
+                Add(node, file, anchor);
+            }
+            Operations(item.Methods, file);
+        }
+        foreach (var connection in model.Connections)
+        {
+            var target = result[connection.TargetDomainId];
+            Add(connection.Node, target.File, target.Anchor);
+        }
+        return result;
+
+        void Add(BusinessNode node, string file, string anchor)
+        {
+            result.TryAdd(node.Id, new(node.Id, file, anchor));
+        }
+
+        void Operations(ImmutableArray<BusinessOperation> operations, string file)
+        {
+            foreach (var operation in operations)
+            {
+                var anchor = MemberAnchor(operation.Node.Id);
+                if (operations.Count(item => MemberAnchor(item.Node.Id) == anchor) > 1)
+                {
+                    var hash = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(operation.Node.Id));
+                    anchor += "-" + Convert.ToHexStringLower(hash)[..8];
+                }
+                Add(operation.Node, file, anchor);
+                foreach (var requirement in operation.Requirements)
+                {
+                    Add(requirement.Node, file, anchor);
+                }
+            }
+        }
+
+        void DiscoverOperation(BusinessOperation operation, string file)
+        {
+            Discover(operation.ReturnType, file);
+            foreach (var parameter in operation.Parameters)
+            {
+                Discover(parameter.Type, file);
+            }
+        }
+
+        void Discover(TypeReference reference, string file)
+        {
+            foreach (var argument in reference.Arguments)
+            {
+                Discover(argument, file);
+            }
+            if (reference.ModelId is not { } id || !owners[id].Add(file))
+            {
+                return;
+            }
+            var item = models[id];
+            foreach (var property in item.Properties)
+            {
+                Discover(property.Type, file);
+            }
+            foreach (var method in item.Methods)
+            {
+                DiscoverOperation(method, file);
+            }
+        }
+    }
+
+    private static string TypeAnchor(string id)
+    {
+        return "type-" + id[(id.IndexOf('|') + 3)..].Replace('.', '-').Replace('+', '-').Replace('`', '-').ToLowerInvariant();
+    }
+
+    private static string MemberAnchor(string id)
+    {
+        var signature = id.Split('(')[0];
+        var separator = signature.LastIndexOf('.');
+        return TypeAnchor(signature[..separator]) + "-" + signature[(separator + 1)..].Split('`')[0].ToLowerInvariant();
+    }
 
     internal IReadOnlyList<(string RelativePath, string Markdown)> Render()
     {

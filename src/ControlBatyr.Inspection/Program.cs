@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ControlBatyr.Inspection;
 
 try
@@ -40,7 +42,11 @@ try
     }
     var model = BusinessApiReader.Read(directory, types.Select(type => type.Assembly).Distinct().ToArray());
     var documents = BusinessApiMarkdown.Render(model).Append(("business-api.json",
-        JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true, NewLine = "\n" }) + "\n")).ToArray();
+        JsonSerializer.Serialize(model, new JsonSerializerOptions
+        {
+            WriteIndented = true, NewLine = "\n", PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        }) + "\n")).ToArray();
     if (args[4].Equals("true", StringComparison.OrdinalIgnoreCase))
     {
         GeneratedFiles.Check(directory, documents);

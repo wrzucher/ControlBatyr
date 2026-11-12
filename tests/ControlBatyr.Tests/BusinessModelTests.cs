@@ -48,7 +48,7 @@ public sealed class BusinessModelTests
         var directory = SampleDirectory();
         var json = File.ReadAllText(Path.Combine(directory, "business-api.json"));
         Assert.DoesNotContain("\r", json);
-        var model = JsonSerializer.Deserialize<BusinessApiModel>(json)!;
+        var model = JsonSerializer.Deserialize<BusinessApiModel>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })!;
         var restored = JsonSerializer.Deserialize<BusinessApiModel>(JsonSerializer.Serialize(model))!;
         Assert.Equal(JsonSerializer.Serialize(ReadSample()), JsonSerializer.Serialize(restored));
         Assert.Contains("business-api.json", File.ReadAllLines(Path.Combine(directory, ".controlbatyr-generated")));
@@ -61,12 +61,55 @@ public sealed class BusinessModelTests
     }
 
     [Fact]
-    public void Every_identifier_maps_to_an_existing_readable_anchor_and_assembly_order_is_irrelevant()
+    public void Generated_json_uses_readable_camel_case_properties_and_omits_nulls()
+    {
+        var json = File.ReadAllText(Path.Combine(SampleDirectory(), "business-api.json"));
+        using var document = JsonDocument.Parse(json);
+        Assert.False(document.RootElement.TryGetProperty("locations", out _));
+        Assert.Contains("players' funds", json);
+        Assert.Contains("\"arguments\": []", json);
+        Assert.Contains("\"remarks\": \"\"", json);
+        Check(document.RootElement);
+
+        static void Check(JsonElement element)
+        {
+            Assert.NotEqual(JsonValueKind.Null, element.ValueKind);
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    Assert.Equal(JsonNamingPolicy.CamelCase.ConvertName(property.Name), property.Name);
+                    Check(property.Value);
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in element.EnumerateArray())
+                {
+                    Check(item);
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void Renderer_maps_every_identifier_to_an_existing_readable_anchor_and_assembly_order_is_irrelevant()
     {
         var model = ReadSample();
         var documents = BusinessApiMarkdown.Render(model).ToDictionary(document => document.RelativePath, document => document.Markdown);
-        Assert.Equal(model.Locations.Length, model.Locations.Select(location => location.Id).Distinct().Count());
-        foreach (var location in model.Locations)
+        var locations = MarkdownRenderer.Locations(model).Values;
+        var operations = model.Domains.SelectMany(domain => domain.Operations).Concat(model.Models.SelectMany(item => item.Methods));
+        var publishers = model.Domains.SelectMany(domain => domain.Publishers);
+        var nodes = model.Domains.Select(domain => domain.Node).Concat(model.Models.Select(item => item.Node))
+            .Concat(operations.Select(operation => operation.Node))
+            .Concat(operations.SelectMany(operation => operation.Requirements).Select(requirement => requirement.Node))
+            .Concat(publishers.Select(publisher => publisher.Node))
+            .Concat(publishers.SelectMany(publisher => publisher.Events).Select(item => item.Node))
+            .Concat(model.Models.SelectMany(item => item.Properties).Select(property => property.Node))
+            .Concat(model.Models.SelectMany(item => item.Values).Select(value => value.Node))
+            .Concat(model.Connections.Select(connection => connection.Node));
+        Assert.Equal(nodes.Select(node => node.Id).Distinct().Order(), locations.Select(location => location.Id).Order());
+        foreach (var location in locations)
         {
             Assert.Contains($"<a id=\"{location.Anchor}\"></a>", documents[location.File]);
         }
@@ -85,17 +128,16 @@ public sealed class BusinessModelTests
         var operation = new BusinessOperation(issue, [new("id", new("int", null, [], ""), "Requested identifier.")],
             new("Ticket", ticket.Id, [], "?"), "The issued ticket.", [requirement]);
         var model = new BusinessApiModel([new("Tickets", manager, [operation], [])],
-            [new(ticket, false, [], [], [])], [],
-            [new(manager.Id, "tickets.md", "tickets"), new(issue.Id, "tickets.md", "issue"), new(ticket.Id, "shared.md", "ticket")]);
+            [new(ticket, false, [], [], [])], []);
 
         var documents = BusinessApiMarkdown.Render(model).ToDictionary(document => document.RelativePath, document => document.Markdown);
 
         Assert.Contains("[Source](../Tickets.cs)", documents["tickets.md"]);
         Assert.Contains("| id | int | Requested identifier. |", documents["tickets.md"]);
-        Assert.Contains("**Returns:** [Ticket](shared.md#ticket)?", documents["tickets.md"]);
+        Assert.Contains("**Returns:** [Ticket](#type-ticket)?", documents["tickets.md"]);
         Assert.Contains("**Remarks**\n\nOnce per request.", documents["tickets.md"]);
         Assert.Contains("- Keeps identifier — [Source](../Checks.cs)", documents["tickets.md"]);
-        Assert.Contains("An issued ticket.", documents["shared.md"]);
+        Assert.Contains("An issued ticket.", documents["tickets.md"]);
     }
 
     [Fact]
@@ -105,7 +147,8 @@ public sealed class BusinessModelTests
         var operations = model.Domains.Single(domain => domain.Name == "Overloads").Operations;
         Assert.Contains(operations, operation => operation.Node.Id.EndsWith("|M:ControlBatyr.Tests.OverloadsManager.Find(System.Int32)", StringComparison.Ordinal));
         Assert.Contains(operations, operation => operation.Node.Id.EndsWith("|M:ControlBatyr.Tests.OverloadsManager.Find(System.String)", StringComparison.Ordinal));
-        var anchors = operations.Select(operation => model.Locations.Single(location => location.Id == operation.Node.Id).Anchor).ToArray();
+        var locations = MarkdownRenderer.Locations(model);
+        var anchors = operations.Select(operation => locations[operation.Node.Id].Anchor).ToArray();
         Assert.Equal(2, anchors.Distinct().Count());
         Assert.All(anchors, anchor => Assert.StartsWith("type-controlbatyr-tests-overloadsmanager-find-", anchor));
     }

@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 namespace ControlBatyr.Inspection;
 
 public sealed record BusinessApiModel(ImmutableArray<BusinessDomain> Domains, ImmutableArray<BusinessModel> Models,
-    ImmutableArray<BusinessConnection> Connections, ImmutableArray<DocumentLocation> Locations);
+    ImmutableArray<BusinessConnection> Connections);
 
 public sealed record BusinessNode(string Id, string Name, string Summary, string Remarks, string? SourceFile);
 
@@ -32,5 +32,3 @@ public sealed record BusinessConnection(BusinessNode Node, string EventId, strin
 
 // An empty name wraps an element type (arrays and nullable value types) using Suffix.
 public sealed record TypeReference(string Name, string? ModelId, ImmutableArray<TypeReference> Arguments, string Suffix);
-
-public sealed record DocumentLocation(string Id, string File, string Anchor);
