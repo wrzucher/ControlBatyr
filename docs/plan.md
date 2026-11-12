@@ -14,7 +14,9 @@ controllers. [D]
 
 - The document is regenerated **at build time** and stored in the repository. Pull request reviews always
   show the current business API diff, out of the box. [D]
-- If a rule is broken or the document cannot be generated, the build fails. [D]
+- The first version is documentation only: an attribute is there — describe it; it is not — skip it. [D]
+- Validation is an optional extension, the `ControlBatyr.Rules` package; the up-to-date check of committed
+  documents is a setting, off by default. If the document cannot be generated at all, the build fails. [D]
 - Editor hints are not needed. [D]
 - The library does not handle reason codes or how operations fail: that is up to the product. [D]
 - The product configures the documentation root folder. There may be several documents. [D]
