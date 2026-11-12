@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <ControlBatyrToolPath Condition="'$(ControlBatyrToolPath)' == ''">$(MSBuildThisFileDirectory)../tools/net10.0/any/ControlBatyr.Inspection.dll</ControlBatyrToolPath>
+  </PropertyGroup>
+  <Target Name="GenerateControlBatyrBusinessApi" AfterTargets="Build"
+          Condition="'$(ControlBatyrDocumentationDirectory)' != '' and '$(DesignTimeBuild)' != 'true' and '$(IsCrossTargetingBuild)' != 'true'">
+    <PropertyGroup>
+      <ControlBatyrAssemblies Condition="'$(ControlBatyrAssemblies)' == ''">$(TargetPath)</ControlBatyrAssemblies>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ControlBatyrAssembly Include="$(ControlBatyrAssemblies)" />
+      <_ControlBatyrReference Include="@(ReferenceCopyLocalPaths)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)controlbatyr-assemblies.txt"
+                      Lines="@(_ControlBatyrAssembly->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)controlbatyr-references.txt"
+                      Lines="@(_ControlBatyrReference->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="dotnet &quot;$(ControlBatyrToolPath)&quot; &quot;$(ControlBatyrDocumentationDirectory)&quot; &quot;$(IntermediateOutputPath)controlbatyr-assemblies.txt&quot; &quot;$(IntermediateOutputPath)controlbatyr-references.txt&quot;" />
+  </Target>
+</Project>

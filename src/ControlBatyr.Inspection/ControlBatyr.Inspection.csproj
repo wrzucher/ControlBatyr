@@ -1,5 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackInspectionTool</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../ControlBatyr/ControlBatyr.csproj" />
+    <None Include="build/ControlBatyr.Inspection.targets" Pack="true" PackagePath="build/" />
+    <InternalsVisibleTo Include="ControlBatyr.Tests" />
   </ItemGroup>
+  <Target Name="PackInspectionTool">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetDir)*.dll;$(TargetDir)*.json">
+        <PackagePath>tools/$(TargetFramework)/any/</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
 </Project>
