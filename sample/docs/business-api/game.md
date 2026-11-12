@@ -224,4 +224,4 @@ Reasons a requested game operation cannot proceed.
 
 ## Connections
 
-- [Game.BetCancelled](#type-game-core-gameeventpublisher-betcancelled) → [Account.RefundBet](account.md#type-game-core-accountmanager-refundbet) — Return the cancelled bet's stake to its player's account.
+- [Game.BetCancelled](#type-game-core-gameeventpublisher-betcancelled) → [Account.RefundBetAsync](account.md#type-game-core-accountmanager-refundbetasync) — Return the cancelled bet's stake to its player's account.

@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace ControlBatyr;
 
@@ -21,19 +20,13 @@ internal sealed record Connection(Type Publisher, EventInfo Event, MethodInfo Me
         var name = (string)attribute.ConstructorArguments[0].Value!;
         var item = publisher.GetEvent(name);
         var parameters = method.GetParameters();
-        var invoke = item?.EventHandlerType?.GetMethod("Invoke");
-        var eventParameters = invoke?.GetParameters();
-        if (!publisher.IsDefined(typeof(EventPublisherAttribute), false) || item is null
-            || item.AddMethod?.IsStatic != false || invoke?.ReturnType != typeof(void)
-            || eventParameters is null || eventParameters.Length is < 1 or > 2
-            || (eventParameters.Length == 2 && eventParameters[0].ParameterType != typeof(object))
-            || !method.IsStatic || method.ContainsGenericParameters || method.ReturnType != typeof(void)
-            || method.IsDefined(typeof(AsyncStateMachineAttribute), false)
+        if (!publisher.IsDefined(typeof(EventPublisherAttribute), false) || item?.AddMethod?.IsStatic != false
+            || !method.IsStatic || method.ContainsGenericParameters || method.ReturnType != typeof(Task)
             || parameters.Length != 2 || !parameters[0].ParameterType.IsDefined(typeof(ManagerAttribute), false)
-            || parameters[1].ParameterType != eventParameters[^1].ParameterType
-            || parameters.Any(parameter => parameter.ParameterType.IsByRef))
+            || parameters.Any(parameter => parameter.ParameterType.IsByRef)
+            || item.EventHandlerType != typeof(Action<>).MakeGenericType(parameters[1].ParameterType))
         {
-            throw new InvalidOperationException($"Connection {method.DeclaringType?.FullName}.{method.Name} must be a synchronous static void method taking a [Manager] and the payload of {publisher.Name}.{name}, a public instance event with one payload (and optional object sender).");
+            throw new InvalidOperationException($"Connection {method.DeclaringType?.FullName}.{method.Name} must be a static Task method taking a [Manager] and the payload of {publisher.Name}.{name}, a public instance Action<T> event.");
         }
         return new Connection(publisher, item, method, parameters[0].ParameterType);
     }

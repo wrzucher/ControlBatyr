@@ -9,11 +9,13 @@ namespace Game.Core;
 public sealed class AccountManager(AccountPersistence accounts)
 {
     /// <summary>Opens an account with the player's initial funds.</summary>
-    public Account OpenAccount(Guid playerId, decimal initialBalance) => accounts.OpenAccount(playerId, initialBalance);
+    public Task<Account> OpenAccountAsync(Guid playerId, decimal initialBalance, CancellationToken ct = default) =>
+        accounts.OpenAccountAsync(playerId, initialBalance, ct);
 
     /// <summary>Shows the player's available funds.</summary>
-    public Account Account(Guid playerId) => accounts.Account(playerId);
+    public Task<Account> AccountAsync(Guid playerId, CancellationToken ct = default) => accounts.AccountAsync(playerId, ct);
 
     /// <summary>Returns the cancelled bet's amount to the player who placed it.</summary>
-    public void RefundBet(Guid playerId, Guid betId, decimal amount) => accounts.RefundBet(playerId, betId, amount);
+    public Task RefundBetAsync(Guid playerId, Guid betId, decimal amount, CancellationToken ct = default) =>
+        accounts.RefundBetAsync(playerId, betId, amount, ct);
 }

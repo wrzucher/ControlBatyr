@@ -12,7 +12,7 @@
 
 Holds players' funds and returns the amounts of cancelled bets.
 
-<a id="type-game-core-accountmanager-openaccount"></a>
+<a id="type-game-core-accountmanager-openaccountasync"></a>
 
 #### OpenAccount
 
@@ -27,7 +27,7 @@ Opens an account with the player's initial funds.
 
 **Returns:** [Account](#type-game-model-account)
 
-<a id="type-game-core-accountmanager-account"></a>
+<a id="type-game-core-accountmanager-accountasync"></a>
 
 #### Account
 
@@ -41,7 +41,7 @@ Shows the player's available funds.
 
 **Returns:** [Account](#type-game-model-account)
 
-<a id="type-game-core-accountmanager-refundbet"></a>
+<a id="type-game-core-accountmanager-refundbetasync"></a>
 
 #### RefundBet
 
@@ -74,4 +74,4 @@ The funds available to a player.
 
 ## Connections
 
-- [Game.BetCancelled](game.md#type-game-core-gameeventpublisher-betcancelled) → [Account.RefundBet](#type-game-core-accountmanager-refundbet) — Return the cancelled bet's stake to its player's account.
+- [Game.BetCancelled](game.md#type-game-core-gameeventpublisher-betcancelled) → [Account.RefundBetAsync](#type-game-core-accountmanager-refundbetasync) — Return the cancelled bet's stake to its player's account.

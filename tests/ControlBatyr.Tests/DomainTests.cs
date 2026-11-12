@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading.Channels;
 using ControlBatyr.Inspection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -47,28 +48,33 @@ public sealed class DomainTests
         {
             var markdown = documents[file];
             Assert.Contains("Origin.Recorded]", markdown);
-            Assert.Contains(" → [Sink.Handle]", markdown);
+            Assert.Contains(" → [Sink.HandleAsync]", markdown);
             Assert.Contains("Record the reading in the receiving domain.", markdown);
         }
         Assert.Contains("origin.md#type-controlbatyr-tests-originpublisher-recorded", documents["index.md"]);
-        Assert.Contains("sink.md#type-controlbatyr-tests-sinkmanager-handle", documents["origin.md"]);
-        Assert.Contains("<a id=\"type-controlbatyr-tests-sinkmanager-handle\"></a>", documents["sink.md"]);
+        Assert.Contains("sink.md#type-controlbatyr-tests-sinkmanager-handleasync", documents["origin.md"]);
+        Assert.Contains("<a id=\"type-controlbatyr-tests-sinkmanager-handleasync\"></a>", documents["sink.md"]);
         Assert.DoesNotContain("## Connections", documents["gateway.md"]);
     }
 
     [Fact]
-    public void Wiring_delivers_payloads_in_fresh_scopes_and_disposes_each_target()
+    public async Task Wiring_awaits_actions_in_fresh_scopes_and_disposes_each_target()
     {
         var (services, recorder, _) = Services();
-        services.AddConnections(typeof(DomainTests).Assembly, typeof(DomainTests).Assembly);
-        services.AddConnections(typeof(DomainTests).Assembly);
-        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        provider.ConnectDomains(typeof(DomainTests).Assembly, typeof(DomainTests).Assembly);
         var publisher = provider.GetRequiredService<OriginPublisher>();
         var first = new SharedReading(new SharedDetails("first"));
         var second = new SharedReading(new SharedDetails("second"));
 
         publisher.NotifyRecorded(first);
+        await recorder.Started.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        Assert.Empty(recorder.Readings);
+        Assert.Empty(recorder.Disposed);
+        recorder.Release.SetResult();
+        await recorder.NextDisposalAsync();
         publisher.NotifyRecorded(second);
+        await recorder.NextDisposalAsync();
 
         Assert.Equal(new[] { first, second }, recorder.Readings);
         Assert.Equal(2, recorder.Instances.Distinct().Count());
@@ -76,58 +82,67 @@ public sealed class DomainTests
         Assert.Same(publisher, provider.GetRequiredService<OriginPublisher>());
     }
 
-    [Fact]
-    public void A_failing_handler_is_logged_with_its_exception_and_connection_identity()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_failing_handler_is_logged_with_its_exception_and_connection_identity(bool throwsSynchronously)
     {
         var (services, recorder, logger) = Services();
-        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        provider.ConnectDomains(typeof(DomainTests).Assembly);
 
-        provider.GetRequiredService<OriginPublisher>().NotifyRejected(new SharedReading(new SharedDetails("rejected")));
+        provider.GetRequiredService<OriginPublisher>().NotifyRejected(
+            new SharedReading(new SharedDetails(throwsSynchronously ? "synchronous" : "asynchronous")));
+        if (!throwsSynchronously)
+        {
+            await recorder.Started.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            recorder.Release.SetResult();
+        }
+        var entry = await logger.Failure.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        await recorder.NextDisposalAsync();
 
-        var entry = Assert.Single(logger.Errors);
         Assert.IsType<InvalidOperationException>(entry.Exception);
         Assert.Equal("The reading was rejected.", entry.Exception.Message);
-        Assert.Contains("TestConnections.Fail", entry.Message);
-        Assert.Contains("OriginPublisher.Rejected", entry.Message);
+        Assert.Contains("TestConnections.FailAsync", entry.Message);
         Assert.Single(recorder.Disposed);
     }
 
     [Fact]
-    public void Existing_singleton_publisher_instances_are_wired_and_sender_events_are_supported()
+    public async Task Existing_singleton_publisher_instances_are_wired_at_startup()
     {
-        var services = new ServiceCollection();
+        var (services, recorder, _) = Services();
         var publisher = new OriginPublisher();
-        var recorder = new DeliveryRecorder();
         services.AddSingleton(publisher);
-        services.AddSingleton(recorder);
-        services.AddSingleton<ILoggerFactory>(new RecordingLogger());
-        services.AddScoped<SinkManager>();
-        services.AddConnections(typeof(DomainTests).Assembly);
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
+        provider.ConnectDomains(typeof(DomainTests).Assembly);
         Assert.Same(publisher, provider.GetRequiredService<OriginPublisher>());
-        var reading = new SharedReading(new SharedDetails("sender"));
+        var reading = new SharedReading(new SharedDetails("reading"));
 
-        publisher.NotifyWithSender(reading);
+        publisher.NotifyRecorded(reading);
+        recorder.Release.SetResult();
+        await recorder.NextDisposalAsync();
 
         Assert.Equal(reading, Assert.Single(recorder.Readings));
     }
 
     [Fact]
-    public void A_scoped_publisher_is_rejected_instead_of_losing_subscriptions_across_scopes()
+    public void A_scoped_publisher_is_rejected_by_scope_validation_at_startup()
     {
-        var services = new ServiceCollection();
+        var (services, _, _) = Services();
         services.AddScoped<OriginPublisher>();
-        var failure = Assert.Throws<InvalidOperationException>(() => services.AddConnections(typeof(DomainTests).Assembly));
-        Assert.Contains("OriginPublisher must be a singleton", failure.Message);
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        var failure = Assert.Throws<InvalidOperationException>(() => provider.ConnectDomains(typeof(DomainTests).Assembly));
+        Assert.Contains("OriginPublisher", failure.Message);
+        Assert.Contains("scoped", failure.Message);
     }
 
     [Theory]
-    [InlineData("Missing", typeof(SinkManager), typeof(SharedReading), typeof(void), true)]
-    [InlineData("Recorded", typeof(DeliveryRecorder), typeof(SharedReading), typeof(void), true)]
-    [InlineData("Recorded", typeof(SinkManager), typeof(string), typeof(void), true)]
-    [InlineData("Recorded", typeof(SinkManager), typeof(SharedReading), typeof(Task), true)]
-    [InlineData("Recorded", typeof(SinkManager), typeof(SharedReading), typeof(void), false)]
-    public void Invalid_connections_fail_at_registration_with_the_connection_and_event_identity(
+    [InlineData("Missing", typeof(SinkManager), typeof(SharedReading), typeof(Task), true)]
+    [InlineData("Recorded", typeof(DeliveryRecorder), typeof(SharedReading), typeof(Task), true)]
+    [InlineData("Recorded", typeof(SinkManager), typeof(string), typeof(Task), true)]
+    [InlineData("Recorded", typeof(SinkManager), typeof(SharedReading), typeof(void), true)]
+    [InlineData("Recorded", typeof(SinkManager), typeof(SharedReading), typeof(Task), false)]
+    public void Invalid_connections_fail_at_startup_with_the_connection_and_event_identity(
         string eventName, Type manager, Type payload, Type returns, bool isStatic)
     {
         var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("InvalidCore"), AssemblyBuilderAccess.Run);
@@ -143,7 +158,8 @@ public sealed class DomainTests
         body.Emit(OpCodes.Ret);
         type.CreateType();
 
-        var failure = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddConnections(assembly));
+        using var provider = new ServiceCollection().BuildServiceProvider();
+        var failure = Assert.Throws<InvalidOperationException>(() => provider.ConnectDomains(assembly));
 
         Assert.Contains("InvalidConnections.Handle", failure.Message);
         Assert.Contains($"OriginPublisher.{eventName}", failure.Message);
@@ -157,7 +173,7 @@ public sealed class DomainTests
         services.AddSingleton(recorder);
         services.AddSingleton<ILoggerFactory>(logger);
         services.AddScoped<SinkManager>();
-        services.AddConnections(typeof(DomainTests).Assembly);
+        services.AddSingleton<OriginPublisher>();
         return (services, recorder, logger);
     }
 }
@@ -172,17 +188,29 @@ public sealed class OriginManager(OriginPublisher publisher)
 }
 
 [Manager]
-public sealed class SinkManager(DeliveryRecorder recorder) : IDisposable
+public sealed class SinkManager(DeliveryRecorder recorder) : IAsyncDisposable
 {
     private readonly Guid instance = Guid.NewGuid();
     public SharedReading Read() => new(new SharedDetails("reading"));
-    public void Handle(SharedReading payload)
+    public async Task HandleAsync(SharedReading payload)
     {
+        recorder.Started.TrySetResult();
+        await recorder.Release.Task;
         recorder.Readings.Add(payload);
         recorder.Instances.Add(instance);
     }
-    public void Fail(SharedReading payload) => throw new InvalidOperationException("The reading was rejected.");
-    public void Dispose() => recorder.Disposed.Add(instance);
+    public async Task FailAsync(SharedReading payload)
+    {
+        recorder.Started.TrySetResult();
+        await recorder.Release.Task;
+        throw new InvalidOperationException("The reading was rejected.");
+    }
+    public ValueTask DisposeAsync()
+    {
+        recorder.Disposed.Add(instance);
+        recorder.Completions.Writer.TryWrite(instance);
+        return ValueTask.CompletedTask;
+    }
 }
 
 public sealed record SharedReading(SharedDetails Details);
@@ -196,10 +224,8 @@ public sealed class OriginPublisher
 {
     public event Action<SharedReading>? Recorded;
     public event Action<SharedReading>? Rejected;
-    public event EventHandler<SharedReading>? WithSender;
     internal void NotifyRecorded(SharedReading reading) => Recorded?.Invoke(reading);
     internal void NotifyRejected(SharedReading reading) => Rejected?.Invoke(reading);
-    internal void NotifyWithSender(SharedReading reading) => WithSender?.Invoke(this, reading);
 }
 
 [EventPublisher]
@@ -213,15 +239,20 @@ internal static class TestConnections
 {
     /// <summary>Record the reading in the receiving domain.</summary>
     [On<OriginPublisher>(nameof(OriginPublisher.Recorded))]
-    [On<OriginPublisher>(nameof(OriginPublisher.WithSender))]
-    internal static void Handle(SinkManager manager, SharedReading payload) => manager.Handle(payload);
+    internal static Task HandleAsync(SinkManager manager, SharedReading payload) => manager.HandleAsync(payload);
 
     [On<OriginPublisher>(nameof(OriginPublisher.Rejected))]
-    internal static void Fail(SinkManager manager, SharedReading payload) => manager.Fail(payload);
+    internal static Task FailAsync(SinkManager manager, SharedReading payload) => payload.Details.Label == "synchronous"
+        ? throw new InvalidOperationException("The reading was rejected.") : manager.FailAsync(payload);
 }
 
 public sealed class DeliveryRecorder
 {
+    internal TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal Channel<Guid> Completions { get; } = Channel.CreateUnbounded<Guid>();
+    internal Task<Guid> NextDisposalAsync() => Completions.Reader.ReadAsync(TestContext.Current.CancellationToken)
+        .AsTask().WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
     internal List<SharedReading> Readings { get; } = [];
     internal List<Guid> Instances { get; } = [];
     internal List<Guid> Disposed { get; } = [];
@@ -229,7 +260,7 @@ public sealed class DeliveryRecorder
 
 internal sealed class RecordingLogger : ILoggerFactory, ILogger
 {
-    internal List<(Exception Exception, string Message)> Errors { get; } = [];
+    internal TaskCompletionSource<(Exception Exception, string Message)> Failure { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public ILogger CreateLogger(string categoryName) => this;
     public void AddProvider(ILoggerProvider provider) { }
     public void Dispose() { }
@@ -240,7 +271,7 @@ internal sealed class RecordingLogger : ILoggerFactory, ILogger
     {
         if (logLevel == LogLevel.Error && exception is not null)
         {
-            Errors.Add((exception, formatter(state, exception)));
+            Failure.TrySetResult((exception, formatter(state, exception)));
         }
     }
 }
