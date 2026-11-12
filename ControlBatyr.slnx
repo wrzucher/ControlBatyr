@@ -7,5 +7,9 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/ControlBatyr/ControlBatyr.csproj" />
+    <Project Path="src/ControlBatyr.Inspection/ControlBatyr.Inspection.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ControlBatyr.Tests/ControlBatyr.Tests.csproj" />
   </Folder>
 </Solution>
