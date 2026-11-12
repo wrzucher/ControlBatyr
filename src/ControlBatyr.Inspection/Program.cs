@@ -23,7 +23,17 @@ try
         return path is null ? null : AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
     };
     var directory = Path.GetFullPath(args[0]);
-    var documents = BusinessApi.Generate(directory, assemblies.Select(AssemblyLoadContext.Default.LoadFromAssemblyPath).ToArray());
+    var cores = assemblies.Select(AssemblyLoadContext.Default.LoadFromAssemblyPath).ToArray();
+    var violations = Rules.Check(Rules.ProductTypes(cores));
+    foreach (var violation in violations)
+    {
+        Console.Error.WriteLine(violation);
+    }
+    if (violations.Count > 0)
+    {
+        return 1;
+    }
+    var documents = BusinessApi.Generate(directory, cores);
     GeneratedFiles.Write(directory, documents);
     Console.WriteLine($"ControlBatyr: generated {documents.Count} business API documents in {directory}.");
     return 0;

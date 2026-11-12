@@ -7,8 +7,9 @@ namespace ControlBatyr.Inspection;
 
 internal static class SourceFiles
 {
-    internal static string? Find(Type type)
+    internal static string? Find(MemberInfo member)
     {
+        var type = member as Type ?? member.DeclaringType!;
         var path = Path.ChangeExtension(type.Assembly.Location, ".pdb");
         if (!File.Exists(path))
         {
@@ -31,7 +32,7 @@ internal static class SourceFiles
         }
         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
             .Cast<MethodBase>().Concat(type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
-            .OrderBy(method => method.MetadataToken);
+            .OrderBy(method => method == member ? 0 : 1).ThenBy(method => method.MetadataToken);
         foreach (var method in methods)
         {
             var handle = (MethodDefinitionHandle)MetadataTokens.Handle(method.MetadataToken);

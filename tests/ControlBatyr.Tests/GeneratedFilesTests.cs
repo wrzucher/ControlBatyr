@@ -70,13 +70,15 @@ public sealed class GeneratedFilesTests : IDisposable
         Assert.False(File.Exists(Path.Combine(directory, "index.md")));
     }
 
-    [Fact]
-    public async Task The_executable_reports_unreadable_assemblies_and_exits_unsuccessfully_without_changing_documents()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task The_executable_reports_load_failures_or_all_rule_violations_without_changing_documents(bool invalidCore)
     {
         GeneratedFiles.Write(directory, [("index.md", "Old index\n")]);
         var assemblyList = Path.Combine(directory, "assemblies.txt");
         var referenceList = Path.Combine(directory, "references.txt");
-        File.WriteAllText(assemblyList, Path.Combine(directory, "missing-core.dll"));
+        File.WriteAllText(assemblyList, invalidCore ? typeof(RulesTests).Assembly.Location : Path.Combine(directory, "missing-core.dll"));
         File.WriteAllText(referenceList, "");
         var testAssembly = typeof(GeneratedFilesTests).Assembly.Location;
         var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
@@ -92,7 +94,18 @@ public sealed class GeneratedFilesTests : IDisposable
         await process.WaitForExitAsync(TestContext.Current.CancellationToken);
 
         Assert.NotEqual(0, process.ExitCode);
-        Assert.Contains("ControlBatyr business API generation failed:", await error);
+        var diagnostics = await error;
+        if (invalidCore)
+        {
+            foreach (var code in Enumerable.Range(1, 6))
+            {
+                Assert.Contains($": error CB{code:0000}:", diagnostics);
+            }
+        }
+        else
+        {
+            Assert.Contains("ControlBatyr business API generation failed:", diagnostics);
+        }
         Assert.Empty(await output);
         Assert.Equal("Old index\n", File.ReadAllText(Path.Combine(directory, "index.md")));
     }
