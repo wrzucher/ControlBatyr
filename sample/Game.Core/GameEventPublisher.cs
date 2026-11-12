@@ -3,6 +3,7 @@ using Game.Model;
 
 namespace Game.Core;
 
+/// <summary>Announces changes to player bets after they have been recorded.</summary>
 [EventPublisher]
 public sealed class GameEventPublisher
 {

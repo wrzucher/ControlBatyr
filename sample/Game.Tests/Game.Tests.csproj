@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Game.Core/Game.Core.csproj" />
+    <ProjectReference Include="../../src/ControlBatyr.Inspection/ControlBatyr.Inspection.csproj" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="11.0.0" />
     <PackageReference Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>

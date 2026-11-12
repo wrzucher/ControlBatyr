@@ -5,6 +5,7 @@ using GameModel = Game.Model.Game;
 
 namespace Game.Core;
 
+/// <summary>Lets players place bets and withdraw them until their game starts.</summary>
 [Manager]
 public sealed class GameManager(GamePersistence games, GameEventPublisher publisher, TimeProvider clock)
 {
