@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Game.Model/Game.Model.csproj" />
+    <ProjectReference Include="../Game.Persistence/Game.Persistence.csproj" />
+    <ProjectReference Include="../../src/ControlBatyr/ControlBatyr.csproj" />
+  </ItemGroup>
+</Project>
