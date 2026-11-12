@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <InternalsVisibleTo Include="Game.Tests" />
+    <InternalsVisibleTo Include="Game.Core" />
     <ProjectReference Include="../Game.Model/Game.Model.csproj" />
     <ProjectReference Include="../../src/ControlBatyr/ControlBatyr.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />

@@ -1,5 +1,6 @@
 using ControlBatyr;
 using Game.Core;
+using Game.Model;
 using Game.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -10,76 +11,93 @@ using Xunit;
 
 namespace Game.Tests;
 
-public sealed class AccountRequirements
+public sealed class AccountRequirements : IAsyncLifetime
 {
-    [Fact]
-    public async Task Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account_through_DI()
+    private readonly SqliteConnection gameConnection = new("Data Source=:memory:");
+    private readonly SqliteConnection accountConnection = new("Data Source=:memory:");
+    private readonly FakeTimeProvider clock = new(new DateTimeOffset(2030, 1, 1, 12, 0, 0, TimeSpan.Zero));
+    private readonly RefundCompletion refund = new();
+    private readonly ServiceProvider provider;
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    public AccountRequirements()
     {
-        var ct = TestContext.Current.CancellationToken;
-        await using var gameConnection = new SqliteConnection("Data Source=:memory:");
-        await using var accountConnection = new SqliteConnection("Data Source=:memory:");
-        await gameConnection.OpenAsync(ct);
-        await accountConnection.OpenAsync(ct);
-        var services = new ServiceCollection();
-        services.AddLogging();
-        var refund = new RefundCompletion();
-        services.AddScoped(_ => new GamePersistence.GameContext(
-            new DbContextOptionsBuilder<GamePersistence.GameContext>().UseSqlite(gameConnection).Options));
-        services.AddScoped(_ => new AccountPersistence.AccountContext(
-            new DbContextOptionsBuilder<AccountPersistence.AccountContext>().UseSqlite(accountConnection).AddInterceptors(refund).Options));
-        services.AddScoped(provider => new GamePersistence(provider.GetRequiredService<GamePersistence.GameContext>()));
-        services.AddScoped(provider => new AccountPersistence(provider.GetRequiredService<AccountPersistence.AccountContext>()));
-        services.AddScoped<GameManager>();
-        services.AddScoped<AccountManager>();
-        var clock = new FakeTimeProvider(new DateTimeOffset(2030, 1, 1, 12, 0, 0, TimeSpan.Zero));
-        services.AddSingleton<TimeProvider>(clock);
-        services.AddSingleton<GameEventPublisher>();
-        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        var services = new ServiceCollection().AddGameCore(
+            options => options.UseSqlite(gameConnection),
+            options => options.UseSqlite(accountConnection).AddInterceptors(refund), clock);
+        provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         provider.ConnectDomains(typeof(GameManager).Assembly);
-        await using (var setup = provider.CreateAsyncScope())
-        {
-            await setup.ServiceProvider.GetRequiredService<GamePersistence.GameContext>().Database.EnsureCreatedAsync(ct);
-            await setup.ServiceProvider.GetRequiredService<AccountPersistence.AccountContext>().Database.EnsureCreatedAsync(ct);
-        }
+    }
+
+    [Fact]
+    public async Task Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account()
+    {
+        var playerId = await PlayerWithAccountAsync(10m);
+        var otherPlayerId = await PlayerWithAccountAsync(80m);
+        var bet = await PlaceBetAsync(playerId, 25m);
+
+        await CancelBetAsync(bet.Id);
+
+        var account = await AccountAfterRefundAsync(playerId);
+        Assert.Equal(35m, account.Balance);
+        Assert.Equal(80m, (await AccountAsync(otherPlayerId)).Balance);
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        await gameConnection.OpenAsync(Ct);
+        await accountConnection.OpenAsync(Ct);
+        await using var scope = provider.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<GamePersistence.GameContext>().Database.EnsureCreatedAsync(Ct);
+        await scope.ServiceProvider.GetRequiredService<AccountPersistence.AccountContext>().Database.EnsureCreatedAsync(Ct);
+    }
+
+    private async Task<Guid> PlayerWithAccountAsync(decimal balance)
+    {
         var playerId = Guid.NewGuid();
-        var otherPlayer = Guid.NewGuid();
-        await using (var scope = provider.CreateAsyncScope())
-        {
-            var accounts = scope.ServiceProvider.GetRequiredService<AccountManager>();
-            await accounts.OpenAccountAsync(playerId, 10m, ct);
-            await accounts.OpenAccountAsync(otherPlayer, 80m, ct);
-            var games = scope.ServiceProvider.GetRequiredService<GameManager>();
-            var game = await games.CreateGameAsync("Moon race", clock.GetUtcNow().AddHours(2), ct);
-            var bet = await games.PlaceBetAsync(game.Id, playerId, 25m, ct);
-            refund.Enabled = true;
-            await games.CancelBetAsync(bet.Id, ct);
-            await refund.Started.Task.WaitAsync(TimeSpan.FromSeconds(10), ct);
-            refund.Release.SetResult();
-            await refund.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10), ct);
-        }
-        await using var reading = provider.CreateAsyncScope();
-        var balances = reading.ServiceProvider.GetRequiredService<AccountManager>();
-        Assert.Equal(35m, (await balances.AccountAsync(playerId, ct)).Balance);
-        Assert.Equal(80m, (await balances.AccountAsync(otherPlayer, ct)).Balance);
+        await using var scope = provider.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<AccountManager>().OpenAccountAsync(playerId, balance, Ct);
+        return playerId;
+    }
+
+    private async Task<Bet> PlaceBetAsync(Guid playerId, decimal amount)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        var games = scope.ServiceProvider.GetRequiredService<GameManager>();
+        var game = await games.CreateGameAsync("Moon race", clock.GetUtcNow().AddHours(2), Ct);
+        return await games.PlaceBetAsync(game.Id, playerId, amount, Ct);
+    }
+
+    private async Task CancelBetAsync(Guid betId)
+    {
+        refund.Enabled = true;
+        await using var scope = provider.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<GameManager>().CancelBetAsync(betId, Ct);
+    }
+
+    private async Task<Account> AccountAfterRefundAsync(Guid playerId)
+    {
+        await refund.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
+        return await AccountAsync(playerId);
+    }
+
+    private async Task<Account> AccountAsync(Guid playerId)
+    {
+        await using var scope = provider.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<AccountManager>().AccountAsync(playerId, Ct);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await provider.DisposeAsync();
+        await gameConnection.DisposeAsync();
+        await accountConnection.DisposeAsync();
     }
 
     private sealed class RefundCompletion : SaveChangesInterceptor
     {
         internal bool Enabled { get; set; }
-        internal TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal TaskCompletionSource Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
-            InterceptionResult<int> result, CancellationToken cancellationToken = default)
-        {
-            if (Enabled)
-            {
-                Started.TrySetResult();
-                await Release.Task.WaitAsync(cancellationToken);
-            }
-            return result;
-        }
 
         public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData,
             int result, CancellationToken cancellationToken = default)
