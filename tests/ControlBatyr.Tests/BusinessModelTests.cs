@@ -56,7 +56,8 @@ public sealed class BusinessModelTests
         {
             Assert.Equal(File.ReadAllText(Path.Combine(directory, document.RelativePath)).ReplaceLineEndings("\n"), document.Markdown);
         }
-        Assert.DoesNotContain(Path.GetPathRoot(directory)!, json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(directory, json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(Path.GetFullPath(Path.Combine(directory, "../../..")), json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\\\\", json);
     }
 
