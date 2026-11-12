@@ -13,4 +13,11 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: dotnet build
+      - name: Check committed business API documents
+        run: |
+          if [ -n "$(git status --porcelain sample/docs)" ]; then
+            echo "Business API documents are stale. Run dotnet build and commit sample/docs."
+            git status --short sample/docs
+            exit 1
+          fi
       - run: dotnet test --no-build
