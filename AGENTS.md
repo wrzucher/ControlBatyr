@@ -1,13 +1,13 @@
-# Правила разработки ControlBatyr
+# ControlBatyr development rules
 
-Репозиторий публичный. В коммиты, тесты, примеры и документы не попадают: рабочие данные, имена людей, почты,
-токены, названия и код закрытых репозиториев. Примеры — только на выдуманной предметике.
+This repository is public. Commits, tests, examples, and documents must not contain work data, people's names,
+email addresses, tokens, or names and code from private repositories. Use only fictional domains in examples.
 
-- Что делаем и в каком порядке — [docs/plan.md](docs/plan.md). Шаг плана — одна ветка и один pull request.
-- Код, комментарии, сообщения ошибок и тесты — на английском. Документы и тексты требований — на русском.
-- .NET 10, `Nullable` включён, предупреждения — ошибки. Сдача — только с зелёными `dotnet build` и `dotnet test`.
-- Простейший вариант. Примитив в библиотеку добавляется, только если он убирает код из примера или без него
-  нельзя собрать документ.
-- Новый публичный тип или метод библиотеки — сначала показать владельцу.
-- Каждый тест — проверка требования. Проверка правила обязана падать на примере, где правило нарушено.
-- Комментарий говорит то, чего нет в коде. Пересказ кода словами не пишем.
+- What we do and in what order is in [docs/plan.md](docs/plan.md). One plan step means one branch and one pull request.
+- Everything is in English, except `docs/concept.md`, which stays in Russian for now.
+- .NET 10, `Nullable` enabled, warnings as errors. Delivery requires passing `dotnet build` and `dotnet test`.
+- Choose the simplest option. Add a library primitive only if it removes code from the example or is needed
+  to generate the document.
+- Show any new public library type or method to the owner first.
+- Every test checks a requirement. A rule check must fail on an example that breaks the rule.
+- Comments say what the code does not. Do not restate the code in words.

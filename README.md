@@ -1,7 +1,8 @@
 # ControlBatyr
 
-Библиотека, которая помогает держать ядро бизнес-логики в одной форме: читает собранное ядро и его тесты,
-собирает из них документ и падает, если правила нарушены.
+A library that keeps business logic cores in a consistent shape: it reads the compiled core and its tests,
+generates a document from them, and fails if rules are broken.
 
-Опытный репозиторий. Образец проектирования, который библиотека удерживает, — [docs/concept.md](docs/concept.md). Что и в каком порядке делаем — [docs/plan.md](docs/plan.md). Правила для разработчика —
+Experimental repository. The design pattern the library enforces is in [docs/concept.md](docs/concept.md).
+What we do and in what order is in [docs/plan.md](docs/plan.md). Developer rules are in
 [AGENTS.md](AGENTS.md).
