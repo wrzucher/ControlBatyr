@@ -141,10 +141,13 @@ internal sealed class BusinessDocument
         {
             var from = domains.Single(domain => domain.Publishers.Contains(connection.Publisher));
             var to = domains.Single(domain => domain.Manager == connection.Manager);
-            var operation = MethodsOf(connection.Manager).FirstOrDefault(method => method.Name == connection.Method.Name);
-            var actionAnchor = operation is null ? Anchor(connection.Manager) : MemberAnchor(operation);
+            var action = connection.Method.Name;
+            if (action.EndsWith("Async", StringComparison.Ordinal))
+            {
+                action = action[..^5];
+            }
             Text($"- {Link(from.Name + "." + connection.Event.Name, from.File, MemberAnchor(connection.Event))} → "
-                + $"{Link(to.Name + "." + connection.Method.Name, to.File, actionAnchor)} — {comments.Summary(connection.Method)}");
+                + $"[{to.Name}]({to.File}): {action} — {comments.Summary(connection.Method)}");
         }
     }
 

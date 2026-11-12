@@ -13,7 +13,7 @@ namespace Game.Tests;
 public sealed class AccountRequirements
 {
     [Fact]
-    public async Task Cancelling_a_bet_refunds_its_stake_to_its_players_account_through_DI()
+    public async Task Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account_through_DI()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var gameConnection = new SqliteConnection("Data Source=:memory:");

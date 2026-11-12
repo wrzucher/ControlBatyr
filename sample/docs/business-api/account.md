@@ -10,7 +10,7 @@
 
 [Source](../../Game.Core/AccountManager.cs)
 
-Holds players' funds and returns the amounts of cancelled bets.
+Holds players' funds and returns cancelled bet amounts.
 
 <a id="type-game-core-accountmanager-openaccountasync"></a>
 
@@ -45,7 +45,7 @@ Shows the player's available funds.
 
 #### RefundBet
 
-Returns the cancelled bet's amount to the player who placed it.
+Returns the bet amount to the player after cancellation.
 
 **Parameters**
 
@@ -74,4 +74,4 @@ The funds available to a player.
 
 ## Connections
 
-- [Game.BetCancelled](game.md#type-game-core-gameeventpublisher-betcancelled) → [Account.RefundBetAsync](#type-game-core-accountmanager-refundbetasync) — Return the cancelled bet's stake to its player's account.
+- [Game.BetCancelled](game.md#type-game-core-gameeventpublisher-betcancelled) → [Account](account.md): RefundBet — Return the bet amount to the player's account after cancellation.

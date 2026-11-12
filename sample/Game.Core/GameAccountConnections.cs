@@ -5,7 +5,7 @@ namespace Game.Core;
 
 internal static class GameAccountConnections
 {
-    /// <summary>Return the cancelled bet's stake to its player's account.</summary>
+    /// <summary>Return the bet amount to the player's account after cancellation.</summary>
     [On<GameEventPublisher>(nameof(GameEventPublisher.BetCancelled))]
     internal static Task RefundBetAsync(AccountManager accounts, BetCancelledEventArgs e) =>
         accounts.RefundBetAsync(e.PlayerId, e.BetId, e.Amount);

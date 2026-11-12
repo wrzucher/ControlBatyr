@@ -165,8 +165,8 @@ Identifies the bet whose cancellation has been recorded.
 | Name | Type | Description |
 | --- | --- | --- |
 | BetId | Guid | The cancelled bet, for lookup or related updates. |
-| PlayerId | Guid | The player whose stake is returned. |
-| Amount | decimal | The stake to return. |
+| PlayerId | Guid | The player who receives the refunded bet amount. |
+| Amount | decimal | The bet amount to return. |
 
 <a id="type-game-model-betplacedeventargs"></a>
 
@@ -224,4 +224,4 @@ Reasons a requested game operation cannot proceed.
 
 ## Connections
 
-- [Game.BetCancelled](#type-game-core-gameeventpublisher-betcancelled) → [Account.RefundBetAsync](account.md#type-game-core-accountmanager-refundbetasync) — Return the cancelled bet's stake to its player's account.
+- [Game.BetCancelled](#type-game-core-gameeventpublisher-betcancelled) → [Account](account.md): RefundBet — Return the bet amount to the player's account after cancellation.

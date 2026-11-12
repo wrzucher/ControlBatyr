@@ -40,7 +40,7 @@ public sealed class DomainTests
     }
 
     [Fact]
-    public void Connections_link_the_index_and_both_domains_to_the_event_and_operation_with_their_summary()
+    public void Connections_link_the_event_and_target_domain_with_the_action_name_and_summary()
     {
         var documents = Documents();
         Assert.Contains("[Origin](origin.md) — Provides readings.", documents["index.md"]);
@@ -48,11 +48,11 @@ public sealed class DomainTests
         {
             var markdown = documents[file];
             Assert.Contains("Origin.Recorded]", markdown);
-            Assert.Contains(" → [Sink.HandleAsync]", markdown);
+            Assert.Contains(" → [Sink](sink.md): ReceiveReading — ", markdown);
             Assert.Contains("Record the reading in the receiving domain.", markdown);
         }
         Assert.Contains("origin.md#type-controlbatyr-tests-originpublisher-recorded", documents["index.md"]);
-        Assert.Contains("sink.md#type-controlbatyr-tests-sinkmanager-handleasync", documents["origin.md"]);
+        Assert.DoesNotContain("sink.md#type-controlbatyr-tests-sinkmanager-handleasync", documents["origin.md"]);
         Assert.Contains("<a id=\"type-controlbatyr-tests-sinkmanager-handleasync\"></a>", documents["sink.md"]);
         Assert.DoesNotContain("## Connections", documents["gateway.md"]);
     }
@@ -103,7 +103,7 @@ public sealed class DomainTests
 
         Assert.IsType<InvalidOperationException>(entry.Exception);
         Assert.Equal("The reading was rejected.", entry.Exception.Message);
-        Assert.Contains("TestConnections.FailAsync", entry.Message);
+        Assert.Contains("TestConnections.RejectReadingAsync", entry.Message);
         Assert.Single(recorder.Disposed);
     }
 
@@ -239,10 +239,10 @@ internal static class TestConnections
 {
     /// <summary>Record the reading in the receiving domain.</summary>
     [On<OriginPublisher>(nameof(OriginPublisher.Recorded))]
-    internal static Task HandleAsync(SinkManager manager, SharedReading payload) => manager.HandleAsync(payload);
+    internal static Task ReceiveReadingAsync(SinkManager manager, SharedReading payload) => manager.HandleAsync(payload);
 
     [On<OriginPublisher>(nameof(OriginPublisher.Rejected))]
-    internal static Task FailAsync(SinkManager manager, SharedReading payload) => payload.Details.Label == "synchronous"
+    internal static Task RejectReadingAsync(SinkManager manager, SharedReading payload) => payload.Details.Label == "synchronous"
         ? throw new InvalidOperationException("The reading was rejected.") : manager.FailAsync(payload);
 }
 

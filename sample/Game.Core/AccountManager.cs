@@ -4,7 +4,7 @@ using Game.Persistence;
 
 namespace Game.Core;
 
-/// <summary>Holds players' funds and returns the amounts of cancelled bets.</summary>
+/// <summary>Holds players' funds and returns cancelled bet amounts.</summary>
 [Manager]
 public sealed class AccountManager(AccountPersistence accounts)
 {
@@ -15,7 +15,7 @@ public sealed class AccountManager(AccountPersistence accounts)
     /// <summary>Shows the player's available funds.</summary>
     public Task<Account> AccountAsync(Guid playerId, CancellationToken ct = default) => accounts.AccountAsync(playerId, ct);
 
-    /// <summary>Returns the cancelled bet's amount to the player who placed it.</summary>
+    /// <summary>Returns the bet amount to the player after cancellation.</summary>
     public Task RefundBetAsync(Guid playerId, Guid betId, decimal amount, CancellationToken ct = default) =>
         accounts.RefundBetAsync(playerId, betId, amount, ct);
 }
