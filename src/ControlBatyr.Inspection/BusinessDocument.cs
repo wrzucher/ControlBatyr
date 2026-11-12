@@ -92,7 +92,7 @@ internal sealed class BusinessDocument
             }
             type = type.GetGenericTypeDefinition();
         }
-        if (!models.Add(type) || Framework(type) || type.IsEnum)
+        if (Framework(type) || !models.Add(type) || type.IsEnum)
         {
             return;
         }
@@ -141,10 +141,6 @@ internal sealed class BusinessDocument
                 Line($"| {field.Name} = {value} |" + (described ? $" {comments.Summary(field)} |" : ""));
             }
             Line();
-        }
-        else if (Framework(type))
-        {
-            Text($"**Type:** {ScalarSchema(type)}");
         }
         else
         {
@@ -321,14 +317,6 @@ internal sealed class BusinessDocument
         : type == typeof(ushort) ? "ushort" : type == typeof(sbyte) ? "sbyte"
         : type == typeof(float) ? "float" : type == typeof(double) ? "double"
         : type == typeof(char) ? "char" : type == typeof(object) ? "object" : type.Name.Split('`')[0];
-
-    private static string ScalarSchema(Type type) => type == typeof(Guid) ? "string (uuid)"
-        : type == typeof(DateTime) || type == typeof(DateTimeOffset) ? "string (date-time)"
-        : type == typeof(DateOnly) ? "string (date)" : type == typeof(TimeOnly) ? "string (time)"
-        : type == typeof(TimeSpan) ? "string (duration)" : type == typeof(Uri) ? "string (uri)"
-        : type == typeof(string) || type == typeof(char) ? "string" : type == typeof(bool) ? "boolean"
-        : type == typeof(decimal) || type == typeof(float) || type == typeof(double) ? "number"
-        : type.IsPrimitive ? "integer" : "object";
 
     private static string NullableSuffix(Type type, NullabilityInfo? info) =>
         !type.IsValueType && info?.ReadState == NullabilityState.Nullable ? "?" : "";

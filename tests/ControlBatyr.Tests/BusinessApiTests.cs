@@ -32,7 +32,7 @@ public sealed class BusinessApiTests
         var find = markdown[markdown.IndexOf("#### Find\n", StringComparison.Ordinal)..markdown.IndexOf("#### Save\n", StringComparison.Ordinal)];
 
         Assert.Contains("Looks up a reading.", find);
-        Assert.Contains("| id | [Guid](#type-system-guid) | The reading to look up. |", find);
+        Assert.Contains("| id | Guid | The reading to look up. |", find);
         Assert.Contains("**Returns:** [Snapshot](#type-controlbatyr-tests-snapshot)?\n\nThe reading, or null when id is unknown.", find);
         Assert.Contains("**Remarks**\n\nUses the current ControlBatyr.Tests.Snapshot.", find);
         Assert.Contains("IReadOnlyList&lt;[Snapshot](#type-controlbatyr-tests-snapshot)&gt;", markdown);
@@ -49,7 +49,7 @@ public sealed class BusinessApiTests
         var markdown = Generate();
 
         Assert.Equal(1, markdown.Split("## Models\n", StringSplitOptions.None).Length - 1);
-        foreach (var name in new[] { "Snapshot", "ReadingState", "ReadingRecordedEventArgs", "ReadingDetails", "Guid", "string" })
+        foreach (var name in new[] { "Snapshot", "ReadingState", "ReadingRecordedEventArgs", "ReadingDetails" })
         {
             Assert.Equal(1, markdown.Split($"### {name}\n", StringSplitOptions.None).Length - 1);
         }
@@ -61,6 +61,25 @@ public sealed class BusinessApiTests
     }
 
     [Fact]
+    public void Primitive_and_framework_types_are_plain_text_and_have_no_model_blocks()
+    {
+        var markdown = Generate();
+
+        Assert.DoesNotContain("type-system-", markdown);
+        foreach (var name in new[] { "Guid", "string", "int", "bool", "decimal", "DateTimeOffset", "IReadOnlyList" })
+        {
+            Assert.DoesNotContain($"### {name}\n", markdown);
+        }
+        Assert.Contains("| id | Guid |", markdown);
+        Assert.Contains("| SourceId | Guid |", markdown);
+        Assert.Contains("| IsReady | bool |", markdown);
+        Assert.Contains("| RecordedAt | DateTimeOffset |", markdown);
+        Assert.Contains("| Value | decimal |", markdown);
+        Assert.Contains("| values | IReadOnlyList&lt;string&gt; |", markdown);
+        Assert.Contains("**Returns:** string\n", markdown);
+    }
+
+    [Fact]
     public void Model_comments_describe_data_computed_properties_methods_and_enum_values()
     {
         var markdown = Generate();
@@ -68,8 +87,8 @@ public sealed class BusinessApiTests
         Assert.Contains("A stored reading.", markdown);
         Assert.Contains("| State | [ReadingState](#type-controlbatyr-tests-readingstate) | Whether the reading is usable. |", markdown);
         var data = markdown[markdown.IndexOf("#### Data", StringComparison.Ordinal)..markdown.IndexOf("#### Computed properties", StringComparison.Ordinal)];
-        Assert.Contains("| SourceId | [Guid](#type-system-guid) | Identifies the source of the reading. |", data);
-        Assert.Contains("| IsReady | [bool](#type-system-boolean) | Whether the reading can be consumed. |", markdown);
+        Assert.Contains("| SourceId | Guid | Identifies the source of the reading. |", data);
+        Assert.Contains("| IsReady | bool | Whether the reading can be consumed. |", markdown);
         Assert.Contains("#### Label\n\nGives the reading a display label.", markdown);
         Assert.Contains("| Ready = 1 | Available for use. |", markdown);
         Assert.Contains("#### Recorded\n\nA reading became available.", markdown);
@@ -86,7 +105,7 @@ public sealed class BusinessApiTests
         Assert.DoesNotContain("Description", save);
         Assert.DoesNotContain("**Returns", save);
         Assert.DoesNotContain("**Remarks", save);
-        Assert.Contains("| Sequence | [int](#type-system-int32) |  |", markdown);
+        Assert.Contains("| Sequence | int |  |", markdown);
         Assert.Contains("| Unavailable = 0 |  |", markdown);
     }
 
@@ -159,6 +178,8 @@ public sealed record Snapshot(ReadingState State)
     /// <summary>Whether the reading can be consumed.</summary>
     public bool IsReady => State == ReadingState.Ready;
     public ReadingDetails? Details { get; init; }
+    public DateTimeOffset RecordedAt { get; init; }
+    public decimal Value { get; init; }
     /// <summary>Gives the reading a display label.</summary>
     public string Label(string prefix) => prefix + Sequence;
 }

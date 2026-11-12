@@ -18,8 +18,8 @@ Sets when the game starts and bets can no longer be cancelled.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| name | [string](#type-system-string) | The title players use to recognise the game. |
-| startsAt | [DateTimeOffset](#type-system-datetimeoffset) | When cancellation closes for every bet on this game. |
+| name | string | The title players use to recognise the game. |
+| startsAt | DateTimeOffset | When cancellation closes for every bet on this game. |
 
 **Returns:** [Game](#type-game-model-game)
 
@@ -33,9 +33,9 @@ Places a player's bet on an existing game.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| gameId | [Guid](#type-system-guid) | The game the player chose. |
-| playerId | [Guid](#type-system-guid) | The player who owns the bet. |
-| amount | [decimal](#type-system-decimal) | The amount the player bets. |
+| gameId | Guid | The game the player chose. |
+| playerId | Guid | The player who owns the bet. |
+| amount | decimal | The amount the player bets. |
 
 **Returns:** [Bet](#type-game-model-bet)
 
@@ -49,7 +49,7 @@ Explains why the player cannot cancel the bet.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| betId | [Guid](#type-system-guid) | The bet whose cancellation the player is considering. |
+| betId | Guid | The bet whose cancellation the player is considering. |
 
 **Returns:** IReadOnlyList&lt;[ServiceErrorCode](#type-game-model-serviceerrorcode)&gt;
 
@@ -67,7 +67,7 @@ Lets the player cancel an open bet before the game starts.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| betId | [Guid](#type-system-guid) | The bet the player wants to cancel. |
+| betId | Guid | The bet the player wants to cancel. |
 
 **Remarks**
 
@@ -81,7 +81,7 @@ Lets the player see the bet's current state.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| betId | [Guid](#type-system-guid) | The bet to look up. |
+| betId | Guid | The bet to look up. |
 
 **Returns:** [Bet](#type-game-model-bet)?
 
@@ -123,18 +123,18 @@ A player's bet on a game, including its current cancellation state.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| Id | [Guid](#type-system-guid) | Identifies the bet for later lookup or cancellation. |
-| GameId | [Guid](#type-system-guid) | The game the player chose. |
-| PlayerId | [Guid](#type-system-guid) | The player who placed the bet. |
-| Amount | [decimal](#type-system-decimal) | The amount the player bet. |
+| Id | Guid | Identifies the bet for later lookup or cancellation. |
+| GameId | Guid | The game the player chose. |
+| PlayerId | Guid | The player who placed the bet. |
+| Amount | decimal | The amount the player bet. |
 | State | [BetState](#type-game-model-betstate) | Whether the bet is still open or has been cancelled. |
-| GameStartsAt | [DateTimeOffset](#type-system-datetimeoffset) | The deadline for cancelling the bet. |
+| GameStartsAt | DateTimeOffset | The deadline for cancelling the bet. |
 
 #### Computed properties
 
 | Name | Type | Description |
 | --- | --- | --- |
-| IsOpen | [bool](#type-system-boolean) | Whether the bet is still open. |
+| IsOpen | bool | Whether the bet is still open. |
 
 <a id="type-game-model-betcancelledeventargs"></a>
 
@@ -148,7 +148,7 @@ Identifies the bet whose cancellation has been recorded.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| BetId | [Guid](#type-system-guid) | The cancelled bet, for lookup or related updates. |
+| BetId | Guid | The cancelled bet, for lookup or related updates. |
 
 <a id="type-game-model-betplacedeventargs"></a>
 
@@ -187,9 +187,9 @@ A scheduled game that players can bet on.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| Id | [Guid](#type-system-guid) | Identifies the game when placing a bet. |
-| Name | [string](#type-system-string) | The title shown to players. |
-| StartsAt | [DateTimeOffset](#type-system-datetimeoffset) | When play begins and cancellation closes. |
+| Id | Guid | Identifies the game when placing a bet. |
+| Name | string | The title shown to players. |
+| StartsAt | DateTimeOffset | When play begins and cancellation closes. |
 
 <a id="type-game-model-serviceerrorcode"></a>
 
@@ -203,33 +203,3 @@ Reasons a requested game operation cannot proceed.
 | GameStarted = 11 | The cancellation deadline has passed. |
 | BetNotFound = 20 | The selected bet does not exist. |
 | BetAlreadyCancelled = 21 | The bet has already been cancelled. |
-
-<a id="type-system-decimal"></a>
-
-### decimal
-
-**Type:** number
-
-<a id="type-system-string"></a>
-
-### string
-
-**Type:** string
-
-<a id="type-system-boolean"></a>
-
-### bool
-
-**Type:** boolean
-
-<a id="type-system-datetimeoffset"></a>
-
-### DateTimeOffset
-
-**Type:** string (date-time)
-
-<a id="type-system-guid"></a>
-
-### Guid
-
-**Type:** string (uuid)
