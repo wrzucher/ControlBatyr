@@ -6,30 +6,37 @@ namespace ControlBatyr.Inspection;
 
 internal sealed class XmlComments
 {
-    private readonly Dictionary<Assembly, Dictionary<string, XElement>> documents;
+    private readonly Dictionary<Assembly, Dictionary<string, XElement>> documents = [];
 
-    internal XmlComments(IEnumerable<Assembly> assemblies)
+    private Dictionary<string, XElement> Document(Assembly assembly)
     {
-        documents = assemblies.ToDictionary(assembly => assembly, assembly =>
+        if (!documents.TryGetValue(assembly, out var document))
         {
             var path = Path.ChangeExtension(assembly.Location, ".xml");
-            return File.Exists(path)
+            document = File.Exists(path)
                 ? XDocument.Load(path).Descendants("member").ToDictionary(member => (string)member.Attribute("name")!, member => member)
                 : new Dictionary<string, XElement>();
-        });
+            documents.Add(assembly, document);
+        }
+        return document;
     }
 
     internal string Summary(MemberInfo member)
     {
-        var document = documents.GetValueOrDefault(member.Module.Assembly);
-        var summary = document?.GetValueOrDefault(Id(member))?.Element("summary");
-        if (summary is null && member is PropertyInfo)
+        var summary = Tag(member, "summary");
+        if (summary.Length == 0 && member is PropertyInfo)
         {
-            summary = document?.GetValueOrDefault(Id(member.DeclaringType!))?.Elements("param")
-                .FirstOrDefault(param => (string?)param.Attribute("name") == member.Name);
+            summary = Tag(member.DeclaringType!, "param", member.Name);
         }
-        var text = summary is null ? "" : Regex.Replace(Content(summary), @"\s+", " ").Trim();
-        return text.Length == 0 ? "—" : text.Replace("&", "&amp;", StringComparison.Ordinal)
+        return summary;
+    }
+
+    internal string Tag(MemberInfo member, string tag, string? name = null)
+    {
+        var element = Document(member.Module.Assembly).GetValueOrDefault(Id(member))?.Elements(tag)
+            .FirstOrDefault(item => name is null || (string?)item.Attribute("name") == name);
+        var text = element is null ? "" : Regex.Replace(Content(element), @"\s+", " ").Trim();
+        return text.Replace("&", "&amp;", StringComparison.Ordinal)
             .Replace("<", "&lt;", StringComparison.Ordinal).Replace(">", "&gt;", StringComparison.Ordinal)
             .Replace("|", "&#124;", StringComparison.Ordinal);
     }
@@ -38,9 +45,10 @@ internal sealed class XmlComments
     {
         XText text => text.Value,
         XElement child when child.Name.LocalName is "see" or "seealso" => child.Value.Length > 0 ? child.Value
-            : (string?)child.Attribute("langword") ?? ((string?)child.Attribute("cref"))?[2..] ?? "",
+            : (string?)child.Attribute("langword") ?? ((string?)child.Attribute("cref"))?[2..]
+                ?? (string?)child.Attribute("href") ?? "",
         XElement child when child.Name.LocalName is "paramref" or "typeparamref" => (string?)child.Attribute("name") ?? "",
-        XElement child => " " + Content(child) + " ",
+        XElement child when child.Name.LocalName is "para" or "c" => " " + Content(child) + " ",
         _ => ""
     }));
 
