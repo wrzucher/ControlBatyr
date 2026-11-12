@@ -20,7 +20,7 @@ public sealed class GameManager(GamePersistence games, GameEventPublisher publis
 
         var bet = await games.PlaceBetAsync(game.Id, playerId, amount, ct);
 
-        publisher.BetPlaced(bet);
+        publisher.NotifyBetPlaced(bet);
         return bet;
     }
 
@@ -38,7 +38,7 @@ public sealed class GameManager(GamePersistence games, GameEventPublisher publis
 
         await games.CancelBetAsync(betId, ct);
 
-        publisher.BetCancelled(betId);
+        publisher.NotifyBetCancelled(betId);
     }
 
     /// <summary>Lets the player see the bet's current state.</summary>

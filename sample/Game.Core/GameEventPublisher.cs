@@ -7,14 +7,14 @@ namespace Game.Core;
 public sealed class GameEventPublisher
 {
     /// <summary>The player's bet has been placed.</summary>
-    public event Action<Bet>? OnBetPlaced;
+    public event Action<Bet>? BetPlaced;
 
     /// <summary>The player's bet has been cancelled.</summary>
-    public event Action<Guid>? OnBetCancelled;
+    public event Action<Guid>? BetCancelled;
 
     /// <summary>Notifies listeners that the bet has been placed.</summary>
-    internal void BetPlaced(Bet bet) => OnBetPlaced?.Invoke(bet);
+    internal void NotifyBetPlaced(Bet bet) => BetPlaced?.Invoke(bet);
 
     /// <summary>Notifies listeners that the bet has been cancelled.</summary>
-    internal void BetCancelled(Guid betId) => OnBetCancelled?.Invoke(betId);
+    internal void NotifyBetCancelled(Guid betId) => BetCancelled?.Invoke(betId);
 }

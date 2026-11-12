@@ -89,7 +89,7 @@ public sealed class GameRequirements : IAsyncLifetime
         var bet = await OpenBetAsync();
         var notifications = new List<Guid>();
         void ObserveCancellation(Guid betId) => notifications.Add(betId);
-        publisher.OnBetCancelled += ObserveCancellation;
+        publisher.BetCancelled += ObserveCancellation;
         try
         {
             await manager.CancelBetAsync(bet.Id, Ct);
@@ -100,7 +100,7 @@ public sealed class GameRequirements : IAsyncLifetime
         }
         finally
         {
-            publisher.OnBetCancelled -= ObserveCancellation;
+            publisher.BetCancelled -= ObserveCancellation;
         }
     }
 
