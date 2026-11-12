@@ -94,3 +94,4 @@ Write-Output 'PASS: packaged rule rejected a mutable model (CB0006).'
 Write-Output 'PASS: generated index, manager, model and requirement documentation; no inspection runtime dependency.'
 $packages.Name | Write-Output
 Write-Output 'Package smoke test passed.'
+exit 0
