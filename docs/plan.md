@@ -1,6 +1,6 @@
 # ControlBatyr plan
 
-Status: 2026-11-12, steps 1–6 complete. [D] means decided by the owner; [P] means lead proposal.
+Status: 2026-11-12, steps 1–6 complete, packages verified, nothing published. [D] means decided by the owner; [P] means lead proposal.
 
 ## Why
 
@@ -82,7 +82,7 @@ Each step is a separate pull request. After each step, show it to the owner, who
 | 4 (done) | Regenerate the documents during the build; configure the documentation folder | `dotnet build` of the example updates the documents in the configured folder; CI fails if the repository copy is stale |
 | 5 (done) | Shape rules (below) | The example has no violations; each rule has an invalid core where the build fails with a clear message |
 | 6 (done) | Level 2: requirements module, `[Requirement]` | Requirements appear under their method in the document |
-| 7 | Decisions based on results: NuGet package, trial in a real product | — |
+| 7 | Packages built and verified locally (done); publishing and a trial in a real product — owner decision | — |
 
 **Splitting documents** (step 3). One file per domain, an index with domains and connections, a shared file for
 models visible in the API of several domains. Domain membership comes from the code, without new attributes:
