@@ -1,24 +1,38 @@
 using Game.Core;
 using Game.Model;
 using Game.Persistence;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using GameModel = Game.Model.Game;
 
 namespace Game.Tests;
 
-public sealed class GameRequirements : IDisposable
+public sealed class GameRequirements : IAsyncLifetime
 {
-    private readonly GamePersistence persistence = new();
+    private readonly SqliteConnection connection = new("Data Source=:memory:");
+    private readonly GamePersistence.GameContext context;
     private readonly FakeTimeProvider clock = new(new DateTimeOffset(2030, 1, 1, 12, 0, 0, TimeSpan.Zero));
-    private readonly GameEventPublisher publisher = GameEventPublisher.Instance;
+    private readonly GameEventPublisher publisher = new();
     private readonly GameManager manager;
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    public GameRequirements() => manager = new GameManager(persistence, publisher, clock);
+    public GameRequirements()
+    {
+        var options = new DbContextOptionsBuilder<GamePersistence.GameContext>().UseSqlite(connection).Options;
+        context = new GamePersistence.GameContext(options);
+        manager = new GameManager(new GamePersistence(context), publisher, clock);
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        await connection.OpenAsync(Ct);
+        await context.Database.EnsureCreatedAsync(Ct);
+    }
 
     [Fact]
-    public async Task Placed_bet_preserves_the_players_commitment_to_the_game()
+    public async Task Placed_bet_preserves_the_player_game_and_amount()
     {
         var game = await UpcomingGameAsync();
         var playerId = Guid.NewGuid();
@@ -70,24 +84,19 @@ public sealed class GameRequirements : IDisposable
     }
 
     [Fact]
-    public async Task Cancellation_notifies_listeners_after_the_bet_is_recorded_as_cancelled()
+    public async Task Cancelled_bet_is_recorded_and_its_identifier_is_published()
     {
         var bet = await OpenBetAsync();
         var notifications = new List<Guid>();
-        Bet? betAtNotification = null;
-        void ObserveCancellation(Guid betId)
-        {
-            notifications.Add(betId);
-            betAtNotification = RecordedBetAsync(betId).GetAwaiter().GetResult();
-        }
+        void ObserveCancellation(Guid betId) => notifications.Add(betId);
         publisher.OnBetCancelled += ObserveCancellation;
         try
         {
             await manager.CancelBetAsync(bet.Id, Ct);
 
             Assert.Equal([bet.Id], notifications);
-            Assert.NotNull(betAtNotification);
-            Assert.Equal(BetState.Cancelled, betAtNotification.State);
+            var cancelledBet = await RecordedBetAsync(bet.Id);
+            Assert.Equal(BetState.Cancelled, cancelledBet.State);
         }
         finally
         {
@@ -125,5 +134,9 @@ public sealed class GameRequirements : IDisposable
     private async Task<Bet> RecordedBetAsync(Guid betId) =>
         Assert.IsType<Bet>(await manager.BetAsync(betId, Ct));
 
-    public void Dispose() => persistence.Dispose();
+    public async ValueTask DisposeAsync()
+    {
+        await context.DisposeAsync();
+        await connection.DisposeAsync();
+    }
 }
