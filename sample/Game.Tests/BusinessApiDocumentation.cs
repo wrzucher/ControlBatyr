@@ -14,7 +14,10 @@ public sealed class BusinessApiDocumentation
         var markdown = BusinessApi.Generate(typeof(GameManager).Assembly, typeof(Bet).Assembly);
         var path = DocumentPath();
         var previous = File.Exists(path) ? File.ReadAllText(path).ReplaceLineEndings("\n") : null;
-        if (previous == markdown) return;
+        if (previous == markdown)
+        {
+            return;
+        }
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, markdown);

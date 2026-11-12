@@ -24,8 +24,10 @@ internal sealed class XmlComments
         var document = documents.GetValueOrDefault(member.Module.Assembly);
         var summary = document?.GetValueOrDefault(Id(member))?.Element("summary");
         if (summary is null && member is PropertyInfo)
+        {
             summary = document?.GetValueOrDefault(Id(member.DeclaringType!))?.Elements("param")
                 .FirstOrDefault(param => (string?)param.Attribute("name") == member.Name);
+        }
         var text = summary is null ? "" : Regex.Replace(Content(summary), @"\s+", " ").Trim();
         return text.Length == 0 ? "—" : text.Replace("&", "&amp;", StringComparison.Ordinal)
             .Replace("<", "&lt;", StringComparison.Ordinal).Replace(">", "&gt;", StringComparison.Ordinal)
@@ -44,28 +46,51 @@ internal sealed class XmlComments
 
     internal static string Id(MemberInfo member)
     {
-        if (member is Type type) return "T:" + TypeId(type);
+        if (member is Type type)
+        {
+            return "T:" + TypeId(type);
+        }
         var prefix = member is MethodInfo ? "M:" : member is PropertyInfo ? "P:" : member is FieldInfo ? "F:" : "E:";
         var name = prefix + TypeId(member.DeclaringType!) + "." + member.Name;
         if (member is MethodInfo method)
         {
-            if (method.IsGenericMethod) name += "``" + method.GetGenericArguments().Length;
+            if (method.IsGenericMethod)
+            {
+                name += "``" + method.GetGenericArguments().Length;
+            }
             var parameters = method.GetParameters();
-            if (parameters.Length > 0) name += "(" + string.Join(",", parameters.Select(parameter => TypeId(parameter.ParameterType))) + ")";
+            if (parameters.Length > 0)
+            {
+                name += "(" + string.Join(",", parameters.Select(parameter => TypeId(parameter.ParameterType))) + ")";
+            }
         }
         return name;
     }
 
     private static string TypeId(Type type)
     {
-        if (type.IsByRef) return TypeId(type.GetElementType()!) + "@";
-        if (type.IsPointer) return TypeId(type.GetElementType()!) + "*";
-        if (type.IsArray) return TypeId(type.GetElementType()!) + (type.GetArrayRank() == 1 ? "[]"
-            : "[" + string.Join(",", Enumerable.Repeat("0:", type.GetArrayRank())) + "]");
-        if (type.IsGenericParameter) return (type.DeclaringMethod is null ? "`" : "``") + type.GenericParameterPosition;
+        if (type.IsByRef)
+        {
+            return TypeId(type.GetElementType()!) + "@";
+        }
+        if (type.IsPointer)
+        {
+            return TypeId(type.GetElementType()!) + "*";
+        }
+        if (type.IsArray)
+        {
+            return TypeId(type.GetElementType()!) + (type.GetArrayRank() == 1 ? "[]"
+                : "[" + string.Join(",", Enumerable.Repeat("0:", type.GetArrayRank())) + "]");
+        }
+        if (type.IsGenericParameter)
+        {
+            return (type.DeclaringMethod is null ? "`" : "``") + type.GenericParameterPosition;
+        }
         if (type.IsGenericType && !type.IsGenericTypeDefinition)
+        {
             return Regex.Replace(type.GetGenericTypeDefinition().FullName!.Replace('+', '.'), @"`\d+", "")
                 + "{" + string.Join(",", type.GetGenericArguments().Select(TypeId)) + "}";
+        }
         return (type.FullName ?? type.Name).Replace('+', '.');
     }
 }

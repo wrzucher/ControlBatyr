@@ -22,10 +22,10 @@ public static class BusinessApi
 
         internal Document(Assembly[] assemblies)
         {
-            var inputs = assemblies.Distinct().ToArray();
-            types = inputs.SelectMany(assembly => assembly.GetTypes())
+            var inputs = assemblies.Distinct().OrderBy(assembly => assembly.FullName, StringComparer.Ordinal).ToArray();
+            types = inputs.SelectMany(assembly => assembly.GetTypes().OrderBy(type => type.MetadataToken))
                 .Where(type => !type.IsDefined(typeof(PersistenceAttribute), false))
-                .OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+                .ToArray();
             models = types.Where(type => type.IsDefined(typeof(ObjectModelAttribute), false)).ToHashSet();
             comments = new XmlComments(inputs);
         }
@@ -44,14 +44,14 @@ public static class BusinessApi
             {
                 var properties = type.GetProperties(PublicMembers)
                     .Where(property => property.GetMethod?.IsPublic == true && property.GetIndexParameters().Length == 0)
-                    .OrderBy(property => property.Name, StringComparer.Ordinal).ToArray();
-                var fields = type.GetFields(PublicMembers).OrderBy(field => field.Name, StringComparer.Ordinal).ToArray();
+                    .OrderBy(property => property.MetadataToken).ToArray();
+                var fields = type.GetFields(PublicMembers).OrderBy(field => field.MetadataToken).ToArray();
                 Line("#### Data");
                 Line();
                 Line("| Name | Type | Description |");
                 Line("| --- | --- | --- |");
                 foreach (var member in properties.Where(IsData).Cast<MemberInfo>()
-                    .Concat(fields).OrderBy(member => member.Name, StringComparer.Ordinal))
+                    .Concat(fields).OrderBy(member => member.MetadataToken))
                 {
                     var info = member is PropertyInfo property ? nullability.Create(property) : nullability.Create((FieldInfo)member);
                     Line($"| {member.Name} | {TypeName(info.Type, info)} | {comments.Summary(member)} |");
@@ -65,7 +65,9 @@ public static class BusinessApi
                     Line("| Name | Type | Description |");
                     Line("| --- | --- | --- |");
                     foreach (var property in computed)
+                    {
                         Line($"| {property.Name} | {TypeName(property.PropertyType, nullability.Create(property))} | {comments.Summary(property)} |");
+                    }
                     Line();
                 }
                 Methods(type);
@@ -75,7 +77,7 @@ public static class BusinessApi
             });
             Section<EventPublisherAttribute>("Events", type =>
             {
-                var events = type.GetEvents(PublicMembers).OrderBy(item => item.Name, StringComparer.Ordinal).ToArray();
+                var events = type.GetEvents(PublicMembers).OrderBy(item => item.MetadataToken).ToArray();
                 Line("| Event | Payload | Description |");
                 Line("| --- | --- | --- |");
                 foreach (var item in events)
@@ -114,7 +116,10 @@ public static class BusinessApi
         private void Section<T>(string title, Action<Type> body) where T : Attribute
         {
             var members = types.Where(type => type.IsDefined(typeof(T), false)).ToArray();
-            if (members.Length == 0) return;
+            if (members.Length == 0)
+            {
+                return;
+            }
             Line($"## {title}");
             Line();
             foreach (var type in members)
@@ -132,13 +137,15 @@ public static class BusinessApi
         private static IEnumerable<MethodInfo> MethodsOf(Type type) => type.GetMethods(PublicMembers)
             .Where(method => !method.IsSpecialName && method.DeclaringType != typeof(object)
                 && !method.IsDefined(typeof(CompilerGeneratedAttribute), false))
-            .OrderBy(method => method.Name, StringComparer.Ordinal)
-            .ThenBy(XmlComments.Id, StringComparer.Ordinal);
+            .OrderBy(method => method.MetadataToken);
 
         private void Methods(Type type)
         {
             var methods = MethodsOf(type).ToArray();
-            if (methods.Length == 0) return;
+            if (methods.Length == 0)
+            {
+                return;
+            }
             Line("#### Methods");
             Line();
             Line("| Method | Description |");
@@ -153,12 +160,17 @@ public static class BusinessApi
                         || result.GetGenericTypeDefinition() == typeof(ValueTask<>));
                 if (asynchronous)
                 {
-                    if (name.EndsWith("Async", StringComparison.Ordinal)) name = name[..^5];
+                    if (name.EndsWith("Async", StringComparison.Ordinal))
+                    {
+                        name = name[..^5];
+                    }
                     result = result.IsGenericType ? result.GetGenericArguments()[0] : typeof(void);
                     info = info.GenericTypeArguments.FirstOrDefault() ?? info;
                 }
                 if (method.IsGenericMethod)
+                {
                     name += "&lt;" + string.Join(", ", method.GetGenericArguments().Select(argument => argument.Name)) + "&gt;";
+                }
                 var parameters = method.GetParameters().Where(parameter => parameter.ParameterType != typeof(CancellationToken))
                     .Select(parameter => $"{parameter.Name}: {TypeName(parameter.ParameterType, nullability.Create(parameter))}");
                 Line($"| {name}({string.Join(", ", parameters)}) → {TypeName(result, info)} | {comments.Summary(method)} |");
@@ -168,11 +180,19 @@ public static class BusinessApi
 
         private string TypeName(Type type, NullabilityInfo? info = null)
         {
-            if (type.IsByRef) return TypeName(type.GetElementType()!, info?.ElementType);
-            if (type.IsArray) return TypeName(type.GetElementType()!, info?.ElementType)
-                + "[" + new string(',', type.GetArrayRank() - 1) + "]" + NullableSuffix(type, info);
+            if (type.IsByRef)
+            {
+                return TypeName(type.GetElementType()!, info?.ElementType);
+            }
+            if (type.IsArray)
+            {
+                return TypeName(type.GetElementType()!, info?.ElementType)
+                    + "[" + new string(',', type.GetArrayRank() - 1) + "]" + NullableSuffix(type, info);
+            }
             if (Nullable.GetUnderlyingType(type) is { } underlying)
+            {
                 return TypeName(underlying, info?.GenericTypeArguments.FirstOrDefault()) + "?";
+            }
             var name = type == typeof(void) ? "void" : type == typeof(string) ? "string"
                 : type == typeof(bool) ? "bool" : type == typeof(decimal) ? "decimal"
                 : type == typeof(int) ? "int" : type == typeof(long) ? "long"
@@ -182,10 +202,14 @@ public static class BusinessApi
                 : type == typeof(float) ? "float" : type == typeof(double) ? "double"
                 : type == typeof(char) ? "char" : type == typeof(object) ? "object" : type.Name.Split('`')[0];
             if (models.Contains(type.IsGenericType ? type.GetGenericTypeDefinition() : type))
+            {
                 name = $"[{name}](#{Anchor(type.IsGenericType ? type.GetGenericTypeDefinition() : type)})";
+            }
             if (type.IsGenericType)
+            {
                 name += "&lt;" + string.Join(", ", type.GetGenericArguments().Select((argument, index) =>
                     TypeName(argument, info?.GenericTypeArguments.ElementAtOrDefault(index)))) + "&gt;";
+            }
             return name + NullableSuffix(type, info);
         }
 
@@ -195,7 +219,7 @@ public static class BusinessApi
         private void Enums(IEnumerable<Type> usedTypes)
         {
             foreach (var type in usedTypes.SelectMany(ContainedTypes).Where(type => type.IsEnum).Distinct()
-                .OrderBy(type => type.FullName, StringComparer.Ordinal))
+                .OrderBy(type => type.Assembly.FullName, StringComparer.Ordinal).ThenBy(type => type.MetadataToken))
             {
                 Line($"#### {type.Name}");
                 Line();
@@ -203,8 +227,12 @@ public static class BusinessApi
                 Line();
                 Line("| Value | Description |");
                 Line("| --- | --- |");
-                foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static).OrderBy(field => field.Name, StringComparer.Ordinal))
+                foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static)
+                    .OrderBy(field => Convert.ToDecimal(field.GetRawConstantValue(), CultureInfo.InvariantCulture))
+                    .ThenBy(field => field.MetadataToken))
+                {
                     Line($"| {field.Name} = {Convert.ToString(field.GetRawConstantValue(), CultureInfo.InvariantCulture)} | {comments.Summary(field)} |");
+                }
                 Line();
             }
         }

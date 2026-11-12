@@ -9,6 +9,6 @@ public enum ServiceErrorCode
     GameStarted = 11,
     /// <summary>The selected bet does not exist.</summary>
     BetNotFound = 20,
-    /// <summary>The stake has already been withdrawn.</summary>
+    /// <summary>The bet has already been cancelled.</summary>
     BetAlreadyCancelled = 21
 }
