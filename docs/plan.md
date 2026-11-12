@@ -16,12 +16,12 @@ controllers. [D]
   show the current business API diff, out of the box. [D]
 - If a rule is broken or the document cannot be generated, the build fails. [D]
 - Editor hints are not needed. [D]
+- The library does not handle reason codes or how operations fail: that is up to the product. [D]
 - The product configures the documentation root folder. There may be several documents. [D]
 
 **Documentation is the product.** We want good documentation: text, decisions, diagrams, and schematics.
 Content generated from the core is part of it: handwritten Markdown and generated documents will include
 each other. We are not doing this now, but choose the format and build setup to support it later. [D]
-- The library does not handle reason codes or how operations fail: that is up to the product. [D]
 
 ## Three levels
 
@@ -50,7 +50,7 @@ conventions. [D]
 | `[On]` | domain connection: this event triggers this action |
 | `[Requirement]` | a test is a requirement for this manager method (level 2) |
 
-Exact attribute names: step 1, with owner review.
+Attribute names (step 1): `[Manager]`, `[ObjectModel]`, `[EventPublisher]`, `[Persistence]`. [D]
 
 ## Repository layout
 
@@ -103,7 +103,7 @@ A method without requirements does not fail the build: the document labels it â€
 - **The library checks shape, not meaning.** A method named `Process(Guid id)` passes every rule. Name quality
   is still a review concern.
 - **A toy example is too forgiving.** The hard parts of the patternâ€”long-running work, workers, in-memory
-  dataâ€”are left out. The real test is a trial in a product, step 6.
+  dataâ€”are left out. The real test is a trial in a product, step 7.
 - **xmldoc and warnings as errors.** Enabling the documentation file requires a comment for every public
   member, which leads to restating the code. We disable this warning; our rule requires comments only where
   they go into the document.
@@ -111,6 +111,6 @@ A method without requirements does not fail the build: the document labels it â€
 
 ## Undecided
 
-- Package and attribute names: owner review in step 1.
+- Package names.
 - How strictly to enforce the test shape.
 - A dedicated type for connections or a service: decide before step 5.
