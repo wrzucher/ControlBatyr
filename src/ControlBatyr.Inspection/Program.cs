@@ -24,7 +24,8 @@ try
     };
     var directory = Path.GetFullPath(args[0]);
     var cores = assemblies.Select(AssemblyLoadContext.Default.LoadFromAssemblyPath).ToArray();
-    var violations = Rules.Check(Rules.ProductTypes(cores));
+    var types = Rules.ProductTypes(cores);
+    var violations = Rules.Check(types);
     foreach (var violation in violations)
     {
         Console.Error.WriteLine(violation);
@@ -33,7 +34,7 @@ try
     {
         return 1;
     }
-    var documents = BusinessApi.Generate(directory, cores);
+    var documents = BusinessApi.Generate(directory, types.Select(type => type.Assembly).Distinct().ToArray());
     GeneratedFiles.Write(directory, documents);
     Console.WriteLine($"ControlBatyr: generated {documents.Count} business API documents in {directory}.");
     return 0;

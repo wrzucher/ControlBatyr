@@ -27,6 +27,10 @@ Opens an account with the player's initial funds.
 
 **Returns:** [Account](#type-game-model-account)
 
+**Requirements**
+
+No requirements
+
 <a id="type-game-core-accountmanager-accountasync"></a>
 
 #### Account
@@ -41,6 +45,10 @@ Shows the player's available funds.
 
 **Returns:** [Account](#type-game-model-account)
 
+**Requirements**
+
+No requirements
+
 <a id="type-game-core-accountmanager-refundbetasync"></a>
 
 #### RefundBet
@@ -54,6 +62,10 @@ Returns the bet amount to the player after cancellation.
 | playerId | Guid |
 | betId | Guid |
 | amount | decimal |
+
+**Requirements**
+
+- Cancelling a bet refunds its bet amount to its players account — [Source](../../Game.Tests/AccountRequirements.cs)
 
 ## Models
 

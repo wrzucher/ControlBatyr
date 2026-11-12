@@ -16,7 +16,8 @@ internal static class Rules
             foreach (var reference in assembly.GetReferencedAssemblies())
             {
                 var dependency = Assembly.Load(reference);
-                if (dependency.GetReferencedAssemblies().Any(name => name.Name == typeof(ManagerAttribute).Assembly.GetName().Name)
+                if (dependency.GetReferencedAssemblies().Any(name => name.Name == typeof(ManagerAttribute).Assembly.GetName().Name
+                        || name.Name == typeof(ControlBatyr.Requirements.RequirementAttribute<>).Assembly.GetName().Name)
                     && found.Add(dependency))
                 {
                     pending.Enqueue(dependency);
@@ -45,6 +46,16 @@ internal static class Rules
             if (Role<PersistenceAttribute>(type)) Persistence(type);
             if (Role<EventPublisherAttribute>(type)) Publisher(type);
             if (Role<ObjectModelAttribute>(type)) Immutable(type);
+        }
+        foreach (var requirement in RequirementLinks.Find(types))
+        {
+            if (!Role<ManagerAttribute>(requirement.Manager)
+                || requirement.Manager.IsDefined(typeof(PersistenceAttribute), false)
+                || !BusinessDocument.MethodsOf(requirement.Manager).Any(method => method.Name == requirement.Operation))
+            {
+                Error("CB0007", requirement.Test,
+                    $"requirement targets {requirement.Manager.FullName}.{requirement.Operation}: select a public operation of a [Manager].");
+            }
         }
         return errors;
 

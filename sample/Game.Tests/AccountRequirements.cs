@@ -1,3 +1,4 @@
+using ControlBatyr.Requirements;
 using ControlBatyr;
 using Game.Core;
 using Game.Model;
@@ -30,6 +31,8 @@ public sealed class AccountRequirements : IAsyncLifetime
     }
 
     [Fact]
+    [Requirement<GameManager>(nameof(GameManager.CancelBetAsync))]
+    [Requirement<AccountManager>(nameof(AccountManager.RefundBetAsync))]
     public async Task Cancelling_a_bet_refunds_its_bet_amount_to_its_players_account()
     {
         var playerId = await PlayerWithAccountAsync(10m);

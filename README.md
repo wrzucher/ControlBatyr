@@ -12,15 +12,21 @@ the `.controlbatyr-generated` ownership manifest, alongside code changes. CI rej
 Handwritten files can share the documentation folder; generation only replaces or removes files in its
 manifest and refuses to overwrite an existing unowned document.
 
-With the inspection package installed, the product opts in with one property:
+With the inspection package installed in the requirement test project, the product opts in with one property:
 
 ```xml
 <ControlBatyrDocumentationDirectory>../docs/business-api</ControlBatyrDocumentationDirectory>
 ```
 
-Paths are relative to the product project. By default, inspection reads that project's compiled assembly;
+Mark test methods with `[Requirement<GameManager>(nameof(GameManager.CancelBetAsync))]` from the separate
+`ControlBatyr.Requirements` module. The test summary, or its name with underscores replaced by spaces,
+appears under the operation with a source link. Unmarked tests are omitted.
+
+Paths are relative to the test project. By default, inspection reads that project's compiled assembly and discovers
+referenced cores, models and requirements;
 `ControlBatyrAssemblies` can specify a semicolon-separated list of assembly paths for multiple cores.
-Referenced models and their adjacent XML comments and portable PDBs are discovered automatically.
+Adjacent XML comments and portable PDBs supply descriptions and source links.
+The sample runs both rules and generation in `Game.Tests`; `Game.Core` does not write documents.
 Generation runs after every build in a separate .NET 10 process, fails the build on error, and leaves
 unchanged files unwritten. The tool needs a .NET runtime compatible with the inspected product.
 

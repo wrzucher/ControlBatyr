@@ -97,7 +97,7 @@ public sealed class GeneratedFilesTests : IDisposable
         var diagnostics = await error;
         if (invalidCore)
         {
-            foreach (var code in Enumerable.Range(1, 6))
+            foreach (var code in Enumerable.Range(1, 7))
             {
                 Assert.Contains($": error CB{code:0000}:", diagnostics);
             }
