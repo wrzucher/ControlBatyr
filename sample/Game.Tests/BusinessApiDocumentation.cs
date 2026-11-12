@@ -11,19 +11,31 @@ public sealed class BusinessApiDocumentation
     [Fact]
     public void Business_api_document_is_current()
     {
-        var path = DocumentPath();
-        var markdown = BusinessApi.Generate(path, typeof(GameManager).Assembly, typeof(Bet).Assembly);
-        var previous = File.Exists(path) ? File.ReadAllText(path).ReplaceLineEndings("\n") : null;
-        if (previous == markdown)
+        var directory = DocumentDirectory();
+        var documents = BusinessApi.Generate(directory, typeof(GameManager).Assembly, typeof(Bet).Assembly);
+        Directory.CreateDirectory(directory);
+        var changed = false;
+        foreach (var (relativePath, markdown) in documents)
         {
-            return;
+            var path = Path.Combine(directory, relativePath);
+            var previous = File.Exists(path) ? File.ReadAllText(path).ReplaceLineEndings("\n") : null;
+            if (previous != markdown)
+            {
+                File.WriteAllText(path, markdown);
+                changed = true;
+            }
         }
-
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, markdown);
-        Assert.Fail("The business API document was updated at sample/docs/business-api.md and must be committed.");
+        foreach (var path in Directory.GetFiles(directory, "*.md"))
+        {
+            if (!documents.Any(document => document.RelativePath == Path.GetFileName(path)))
+            {
+                File.Delete(path);
+                changed = true;
+            }
+        }
+        Assert.False(changed, "The business API documents were updated at sample/docs/business-api/ and must be committed.");
     }
 
-    private static string DocumentPath([CallerFilePath] string source = "") =>
-        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source)!, "../docs/business-api.md"));
+    private static string DocumentDirectory([CallerFilePath] string source = "") =>
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source)!, "../docs/business-api"));
 }

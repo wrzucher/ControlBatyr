@@ -94,7 +94,7 @@ public sealed class GameRequirements : IAsyncLifetime
         {
             await manager.CancelBetAsync(bet.Id, Ct);
 
-            Assert.Equal([new BetCancelledEventArgs(bet.Id)], notifications);
+            Assert.Equal([new BetCancelledEventArgs(bet.Id, bet.PlayerId, bet.Amount)], notifications);
             var cancelledBet = await RecordedBetAsync(bet.Id);
             Assert.Equal(BetState.Cancelled, cancelledBet.State);
         }
