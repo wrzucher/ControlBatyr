@@ -128,7 +128,7 @@ public sealed class GeneratedFilesTests : IDisposable
         var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "exec", "--runtimeconfig", Path.ChangeExtension(testAssembly, ".runtimeconfig.json"),
             "--depsfile", Path.ChangeExtension(testAssembly, ".deps.json"), typeof(BusinessApiReader).Assembly.Location,
-            directory, assemblyList, referenceList, invalidCore ? typeof(Rules).Assembly.Location : "", "false" })
+            directory, assemblyList, referenceList, invalidCore ? typeof(Rules).Assembly.Location : "", "false", "markdown;model" })
         {
             start.ArgumentList.Add(argument);
         }

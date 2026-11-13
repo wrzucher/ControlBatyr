@@ -4,7 +4,7 @@ internal static class GeneratedFiles
 {
     private const string Manifest = ".controlbatyr-generated";
 
-    internal static void Check(string directory, IReadOnlyList<(string RelativePath, string Markdown)> documents,
+    internal static void Check(string directory, IReadOnlyList<(string RelativePath, string Content)> documents,
         Func<string, bool>? isEnabled = null)
     {
         isEnabled ??= _ => true;
@@ -24,7 +24,7 @@ internal static class GeneratedFiles
         }
     }
 
-    internal static void Write(string directory, IReadOnlyList<(string RelativePath, string Markdown)> documents,
+    internal static void Write(string directory, IReadOnlyList<(string RelativePath, string Content)> documents,
         Func<string, bool>? isEnabled = null)
     {
         isEnabled ??= _ => true;
@@ -47,9 +47,9 @@ internal static class GeneratedFiles
             }
         }
         Directory.CreateDirectory(directory);
-        foreach (var (file, markdown) in documents)
+        foreach (var (file, content) in documents)
         {
-            WriteIfChanged(Path.Combine(directory, file), markdown);
+            WriteIfChanged(Path.Combine(directory, file), content);
         }
         foreach (var file in previous.Where(isEnabled).Except(current, StringComparer.OrdinalIgnoreCase))
         {

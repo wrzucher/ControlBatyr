@@ -532,7 +532,8 @@
         }
       ],
       "methods": [],
-      "values": []
+      "values": [],
+      "isRecord": true
     },
     {
       "node": {
@@ -576,7 +577,8 @@
         }
       ],
       "methods": [],
-      "values": []
+      "values": [],
+      "isRecord": true
     },
     {
       "node": {
@@ -696,7 +698,8 @@
         }
       ],
       "methods": [],
-      "values": []
+      "values": [],
+      "isRecord": true
     },
     {
       "node": {
@@ -755,7 +758,8 @@
         }
       ],
       "methods": [],
-      "values": []
+      "values": [],
+      "isRecord": true
     },
     {
       "node": {
@@ -785,7 +789,8 @@
         }
       ],
       "methods": [],
-      "values": []
+      "values": [],
+      "isRecord": true
     },
     {
       "node": {
@@ -816,7 +821,8 @@
           },
           "value": "1"
         }
-      ]
+      ],
+      "isRecord": false
     },
     {
       "node": {
@@ -875,7 +881,8 @@
         }
       ],
       "methods": [],
-      "values": []
+      "values": [],
+      "isRecord": true
     },
     {
       "node": {
@@ -924,7 +931,8 @@
           },
           "value": "21"
         }
-      ]
+      ],
+      "isRecord": false
     }
   ],
   "connections": [

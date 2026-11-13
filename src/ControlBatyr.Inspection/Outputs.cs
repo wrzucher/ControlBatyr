@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace ControlBatyr.Inspection;
 
 internal sealed record Output(string Name, Func<string, bool> Owns,
-    Func<BusinessApiModel, IEnumerable<(string RelativePath, string Markdown)>> Render);
+    Func<BusinessApiModel, IEnumerable<(string RelativePath, string Content)>> Render);
 
 internal static class Outputs
 {
@@ -17,7 +17,8 @@ internal static class Outputs
             {
                 WriteIndented = true, NewLine = "\n", PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            }) + "\n")])
+            }) + "\n")]),
+        new("mermaid", _ => false, _ => [])
     ];
 
     internal static bool IsKnownFile(string file) => Known.Any(output => output.Owns(file));
@@ -31,6 +32,8 @@ internal static class Outputs
         {
             throw new ArgumentException($"Unknown ControlBatyrOutputs name(s): {string.Join(", ", unknown)}. Known names: {string.Join(", ", Known.Select(output => output.Name))}.");
         }
-        return Known.Where(output => requested.Contains(output.Name)).ToArray();
+        return Known.Where(output => requested.Contains(output.Name)).Select(output =>
+            output.Name == "markdown" && requested.Contains("mermaid")
+                ? output with { Render = model => new MarkdownRenderer(model, diagrams: true).Render() } : output).ToArray();
     }
 }

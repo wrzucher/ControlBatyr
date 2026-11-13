@@ -40,7 +40,16 @@ elsewhere, as above. Inspection runs during the test project's
 build and adds no runtime dependency. Reference Inspection directly in each project that generates documents.
 
 `ControlBatyrOutputs` is a case-insensitive `;`-separated list: `markdown;model` by default; empty writes and checks nothing.
-Known names are `markdown` and `model`; disabled outputs are kept, and removing their files is the product's choice.
+Known names are `markdown`, `model`, and `mermaid`; disabled outputs are kept, and removing their files is the product's choice.
+Add `mermaid` (for example, `markdown;model;mermaid`) for a `## Diagram` class diagram in each domain overview.
+It is off by default and requires `markdown`; without it, no diagrams are written and the build explains why.
+Operations show names only; `raises` edges include the operation name. Models show properties, records and enums
+carry stereotypes, and events show payload properties. Other domains appear by domain name on `on` edges.
+Single-argument generics use Mermaid tildes (`List~Bet~`); multi-argument generics show the type name and tuples show `Tuple`.
+
+The comment `%% @arch/1 diagram profile=class-v1` identifies the diagram profile. Immediately before each class,
+`%% @arch/1 type id="..."` preserves its business model identifier (including publisher event member identifiers).
+These comments connect diagram elements to the model; ordinary Mermaid renderers ignore them.
 
 This setup generates documentation only. Missing comments and pattern violations do not fail inspection;
 a requirement pointing to no documented operation is simply omitted. Assembly loading and other errors

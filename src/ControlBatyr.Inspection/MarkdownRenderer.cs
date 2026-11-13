@@ -3,7 +3,7 @@ using System.Text;
 
 namespace ControlBatyr.Inspection;
 
-internal sealed class MarkdownRenderer(BusinessApiModel model)
+internal sealed class MarkdownRenderer(BusinessApiModel model, bool diagrams = false)
 {
     private readonly StringBuilder output = new();
     private readonly Dictionary<string, DocumentLocation> locations = Locations(model);
@@ -169,6 +169,11 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
             Overview("Events", Events(domain).Select(item => item.Node));
             Overview("Connections", connections.Select(connection => connection.Node with { Name = ActionName(connection.Node) }));
             Overview("Models", model.Models.Where(item => File(item.Node) == File(domain.Node)).Select(item => item.Node));
+            if (diagrams)
+            {
+                Text("## Diagram");
+                Text("```mermaid\n" + MermaidRenderer.Render(model, domain) + "```");
+            }
             documents.Add(Finish());
 
             Start(File(domain.Node), domain.Name + " reference");

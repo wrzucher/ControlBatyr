@@ -112,7 +112,7 @@ if (!($references | Where-Object { $_ -like '*Markdig.dll' }) -or
 $tool = Join-Path $cache "controlbatyr.inspection/$version/tools/net10.0/any/ControlBatyr.Inspection.dll"
 $legacy = & dotnet $tool (Join-Path $consumer 'legacy-docs') `
     (Join-Path $consumer 'obj/Debug/net10.0/controlbatyr-assemblies.txt') `
-    (Join-Path $consumer 'obj/Debug/net10.0/copy-local-references.txt') '' false 2>&1
+    (Join-Path $consumer 'obj/Debug/net10.0/copy-local-references.txt') '' false 'markdown;model' 2>&1
 if ($LASTEXITCODE -eq 0 -or ($legacy -join "`n") -notmatch "Could not load file or assembly 'Markdig") {
     $legacy | Write-Output
     throw 'The class library must reproduce the preview.3 copy-local-only resolution failure.'
@@ -133,6 +133,20 @@ foreach ($selection in 'model', 'markdown') {
         throw "The packaged target did not select only $selection."
     }
 }
+$diagramDirectory = Join-Path $consumer 'diagram-docs'
+Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" '-p:ControlBatyrOutputs=markdown%3Bmermaid' "-p:ControlBatyrDocumentationDirectory=$diagramDirectory"
+$diagram = Get-Content (Join-Path $diagramDirectory 'ticket.md') -Raw
+if (!$diagram.Contains('## Diagram') -or !$diagram.Contains('classDiagram') -or
+    !$diagram.Contains('%% @arch/1 type id="A:Consumer|T:PackageSmoke.TicketManager"')) {
+    throw 'The packaged Mermaid output must embed an identified class diagram in the domain overview.'
+}
+$mermaidDirectory = Join-Path $consumer 'mermaid-only-docs'
+$mermaidOnly = & dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" '-p:ControlBatyrOutputs=mermaid' "-p:ControlBatyrDocumentationDirectory=$mermaidDirectory" 2>&1
+if ($LASTEXITCODE -ne 0 -or (Test-Path $mermaidDirectory) -or ($mermaidOnly -join "`n") -notmatch 'mermaid requires markdown') {
+    $mermaidOnly | Write-Output
+    throw 'Mermaid alone must write nothing and explain that Markdown is required.'
+}
+Write-Output 'PASS: packaged Mermaid embeds diagrams with Markdown; Mermaid alone writes nothing and explains why.'
 $unknown = & dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" '-p:ControlBatyrOutputs=unknown' 2>&1
 if ($LASTEXITCODE -eq 0 -or ($unknown -join "`n") -notmatch 'Unknown ControlBatyrOutputs.*unknown.*Known names: markdown, model') {
     $unknown | Write-Output

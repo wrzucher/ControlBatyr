@@ -100,9 +100,9 @@ public sealed class BusinessModelTests
         var restored = JsonSerializer.Deserialize<BusinessApiModel>(JsonSerializer.Serialize(model))!;
         Assert.Equal(JsonSerializer.Serialize(ReadSample()), JsonSerializer.Serialize(restored));
         Assert.Contains("business-api.json", File.ReadAllLines(Path.Combine(directory, ".controlbatyr-generated")));
-        foreach (var document in BusinessApiMarkdown.Render(restored))
+        foreach (var document in Outputs.Select("markdown;mermaid").SelectMany(output => output.Render(restored)))
         {
-            Assert.Equal(File.ReadAllText(Path.Combine(directory, document.RelativePath)).ReplaceLineEndings("\n"), document.Markdown);
+            Assert.Equal(File.ReadAllText(Path.Combine(directory, document.RelativePath)).ReplaceLineEndings("\n"), document.Content);
         }
         Assert.DoesNotContain(directory, json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(Path.GetFullPath(Path.Combine(directory, "../../..")), json, StringComparison.OrdinalIgnoreCase);

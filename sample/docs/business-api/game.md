@@ -39,3 +39,83 @@ Lets players place bets and cancel them until their game starts.
 - [Game](game.reference.md#type-game-model-game) — A scheduled game that players can bet on.
 
 - [ServiceErrorCode](game.reference.md#type-game-model-serviceerrorcode) — Reasons a requested game operation cannot proceed.
+
+## Diagram
+
+```mermaid
+classDiagram
+%% @arch/1 diagram profile=class-v1
+%% @arch/1 type id="A:Game.Core|T:Game.Core.GameManager"
+class C0["GameManager"] {
+    +CreateGame()
+    +PlaceBet()
+    +CancelBetProblem()
+    +CancelBet()
+    +Bet()
+}
+%% @arch/1 type id="A:Game.Model|T:Game.Model.Bet"
+class C1["Bet"] {
+    <<record>>
+    +Guid Id
+    +Guid GameId
+    +Guid PlayerId
+    +decimal Amount
+    +BetState State
+    +DateTimeOffset GameStartsAt
+    +bool IsOpen
+}
+%% @arch/1 type id="A:Game.Model|T:Game.Model.BetCancelledEventArgs"
+class C2["BetCancelledEventArgs"] {
+    <<record>>
+    +Guid BetId
+    +Guid PlayerId
+    +decimal Amount
+}
+%% @arch/1 type id="A:Game.Model|T:Game.Model.BetPlacedEventArgs"
+class C3["BetPlacedEventArgs"] {
+    <<record>>
+    +Bet Bet
+}
+%% @arch/1 type id="A:Game.Model|T:Game.Model.BetState"
+class C4["BetState"] {
+    <<enumeration>>
+    +Open
+    +Cancelled
+}
+%% @arch/1 type id="A:Game.Model|T:Game.Model.Game"
+class C5["Game"] {
+    <<record>>
+    +Guid Id
+    +string Name
+    +DateTimeOffset StartsAt
+}
+%% @arch/1 type id="A:Game.Model|T:Game.Model.ServiceErrorCode"
+class C6["ServiceErrorCode"] {
+    <<enumeration>>
+    +GameNotFound
+    +GameStarted
+    +BetNotFound
+    +BetAlreadyCancelled
+}
+%% @arch/1 type id="A:Game.Core|E:Game.Core.GameEventPublisher.BetPlaced"
+class C7["BetPlaced"] {
+    <<event>>
+    +Bet Bet
+}
+%% @arch/1 type id="A:Game.Core|E:Game.Core.GameEventPublisher.BetCancelled"
+class C8["BetCancelled"] {
+    <<event>>
+    +Guid BetId
+    +Guid PlayerId
+    +decimal Amount
+}
+%% @arch/1 type id="A:Game.Core|T:Game.Core.AccountManager"
+class C9["Account"] {
+}
+C0 ..> C5
+C0 ..> C1
+C0 ..> C6
+C0 ..> C7 : raises PlaceBet
+C0 ..> C8 : raises CancelBet
+C8 ..> C9 : on
+```

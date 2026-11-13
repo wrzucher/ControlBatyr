@@ -113,7 +113,12 @@ internal sealed class AssemblyReader
             var info = member is PropertyInfo property ? nullability.Create(property) : nullability.Create((FieldInfo)member);
             return new BusinessProperty(Node(member), Reference(info.Type, info, TupleNames(member)), Computed(member));
         }).ToImmutableArray();
-        return new(node, false, properties, Operations(type), []);
+        return new(node, false, properties, Operations(type), [])
+        {
+            IsRecord = type.GetMethod("<Clone>$", BindingFlags.Public | BindingFlags.Instance) is not null
+                || type.GetMethod("PrintMembers", BindingFlags.NonPublic | BindingFlags.Instance, [typeof(System.Text.StringBuilder)])
+                    ?.IsDefined(typeof(CompilerGeneratedAttribute), false) == true
+        };
     }
 
     private ImmutableArray<BusinessOperation> Operations(Type type)
