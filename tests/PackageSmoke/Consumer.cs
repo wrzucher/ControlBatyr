@@ -3,15 +3,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ControlBatyr.Requirements;
+using Markdig;
+using PackageSmoke.Catalog;
 
 namespace PackageSmoke;
 
-internal static class Program
+public static class SmokeScenario
 {
-    private static void Main()
+    public static void Run()
     {
         TicketRequirements.Issued_ticket_keeps_its_identifier();
         using var provider = new ServiceCollection().AddLogging().AddSingleton<TicketPublisher>()
+            .AddSingleton(new MarkdownPipelineBuilder().Build()).AddSingleton<TicketCatalog>()
             .AddScoped<TicketManager>().BuildServiceProvider();
         provider.ConnectDomains(typeof(TicketManager).Assembly);
         provider.GetRequiredService<TicketPublisher>().NotifyIssued(new Ticket(42));
@@ -24,13 +27,15 @@ internal static class Program
 
 /// <summary>Offers tickets for a fictional event.</summary>
 [Manager]
-internal sealed class TicketManager(TicketPublisher publisher, ILogger<TicketManager> logger)
+internal sealed class TicketManager(TicketPublisher publisher, ILogger<TicketManager> logger,
+    MarkdownPipeline pipeline, TicketCatalog catalog)
 {
     private readonly TicketPublisher publisher = publisher;
     private readonly ILogger<TicketManager> logger = logger;
     /// <summary>Issues a ticket with the requested identifier.</summary>
     public Ticket Issue(int id)
     {
+        _ = Markdown.ToHtml(catalog.Description, pipeline);
         logger.LogDebug("Issuing ticket {Id}.", id);
         var ticket = new Ticket(id);
         publisher.NotifyIssued(ticket);
@@ -47,7 +52,8 @@ public static class TicketRequirements
     [Requirement<TicketManager>(nameof(TicketManager.Issue))]
     public static void Issued_ticket_keeps_its_identifier()
     {
-        if (new TicketManager(new TicketPublisher(), NullLogger<TicketManager>.Instance).Issue(42).Id != 42)
+        if (new TicketManager(new TicketPublisher(), NullLogger<TicketManager>.Instance,
+            new MarkdownPipelineBuilder().Build(), new TicketCatalog()).Issue(42).Id != 42)
         {
             throw new InvalidOperationException("The ticket must keep its identifier.");
         }

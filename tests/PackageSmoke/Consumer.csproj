@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -9,6 +8,9 @@
     <NoWarn>CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="ProjectDependency/**/*.cs;Runner/**/*.cs" />
+    <ProjectReference Include="ProjectDependency/ProjectDependency.csproj" />
+    <PackageReference Include="Markdig" Version="1.4.0" />
     <PackageReference Include="ControlBatyr" Version="$(ControlBatyrPackageVersion)" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="ControlBatyr.Connections" Version="$(ControlBatyrPackageVersion)" />
@@ -16,4 +18,8 @@
     <PackageReference Include="ControlBatyr.Rules" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" Condition="'$(UseRules)' == 'true'" />
     <PackageReference Include="ControlBatyr.Inspection" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" />
   </ItemGroup>
+  <Target Name="CaptureCopyLocalReferences" AfterTargets="Build">
+    <WriteLinesToFile File="$(IntermediateOutputPath)copy-local-references.txt"
+                      Lines="@(ReferenceCopyLocalPaths->'%(FullPath)')" Overwrite="true" />
+  </Target>
 </Project>

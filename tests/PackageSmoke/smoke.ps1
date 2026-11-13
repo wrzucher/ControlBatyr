@@ -50,6 +50,7 @@ foreach ($id in 'ControlBatyr', 'ControlBatyr.Connections', 'ControlBatyr.Requir
 }
 
 Copy-Item (Join-Path $PSScriptRoot 'Consumer.csproj'), (Join-Path $PSScriptRoot 'Consumer.cs') $consumer
+Copy-Item (Join-Path $PSScriptRoot 'ProjectDependency'), (Join-Path $PSScriptRoot 'Runner') $consumer -Recurse
 # Isolate the consumer from repository build defaults and configured package sources.
 Set-Content (Join-Path $consumer 'Directory.Build.props') '<Project />'
 Set-Content (Join-Path $consumer 'Directory.Build.targets') '<Project />'
@@ -64,7 +65,7 @@ Set-Content (Join-Path $consumer 'NuGet.Config') @"
   <packageSourceMapping>
     <clear />
     <packageSource key="local"><package pattern="ControlBatyr*" /></packageSource>
-    <packageSource key="nuget.org"><package pattern="Microsoft.*" /></packageSource>
+    <packageSource key="nuget.org"><package pattern="Microsoft.*" /><package pattern="Markdig" /></packageSource>
   </packageSourceMapping>
 </configuration>
 "@
@@ -92,11 +93,29 @@ foreach ($text in 'Issues a ticket with the requested identifier.', 'TicketManag
     if (!$markdown.Contains($text)) { throw "Generated document is missing: $text" }
 }
 $output = Join-Path $consumer 'bin/Debug/net10.0'
-Invoke-Dotnet (Join-Path $output 'Consumer.dll')
+if (Test-Path (Join-Path $output 'Markdig.dll')) {
+    throw 'The core must exercise a NuGet dependency that is not copy-local.'
+}
+$references = Get-Content (Join-Path $consumer 'obj/Debug/net10.0/controlbatyr-references.txt')
+if (!($references | Where-Object { $_ -like '*Markdig.dll' }) -or
+    !($references | Where-Object { $_ -like '*ProjectDependency.dll' }) -or
+    ($references | Where-Object { $_ -match '[/\\]ref[/\\]' })) {
+    throw 'Inspection must receive runtime NuGet and project assemblies, without reference assemblies.'
+}
+$tool = Join-Path $cache "controlbatyr.inspection/$version/tools/net10.0/any/ControlBatyr.Inspection.dll"
+$legacy = & dotnet $tool (Join-Path $consumer 'legacy-docs') `
+    (Join-Path $consumer 'obj/Debug/net10.0/controlbatyr-assemblies.txt') `
+    (Join-Path $consumer 'obj/Debug/net10.0/copy-local-references.txt') '' false 2>&1
+if ($LASTEXITCODE -eq 0 -or ($legacy -join "`n") -notmatch "Could not load file or assembly 'Markdig") {
+    $legacy | Write-Output
+    throw 'The class library must reproduce the preview.3 copy-local-only resolution failure.'
+}
+Write-Output 'PASS: copy-local-only resolution fails on Markdig; runtime assets generate documents for the class library.'
 if ((Test-Path (Join-Path $output 'ControlBatyr.Inspection.dll')) -or
     (Get-Content (Join-Path $output 'Consumer.deps.json') -Raw).Contains('ControlBatyr.Inspection')) {
     throw 'Inspection must not be a consumer runtime dependency.'
 }
+Invoke-Dotnet run --project (Join-Path $consumer 'Runner/Runner.csproj') "-p:ControlBatyrPackageVersion=$version" "-p:RestorePackagesPath=$cache"
 
 Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:ControlBatyrCheckDocuments=true"
 Add-Content $document 'Stale document'
