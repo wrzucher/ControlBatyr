@@ -99,7 +99,7 @@ internal sealed class AssemblyReader
         var properties = DataOf(type).Select(member =>
         {
             var info = member is PropertyInfo property ? nullability.Create(property) : nullability.Create((FieldInfo)member);
-            return new BusinessProperty(Node(member), Reference(info.Type, info), Computed(member));
+            return new BusinessProperty(Node(member), Reference(info.Type, info, TupleNames(member)), Computed(member));
         }).ToImmutableArray();
         return new(node, false, properties, Operations(type), []);
     }
@@ -128,10 +128,10 @@ internal sealed class AssemblyReader
             name += "&lt;" + string.Join(", ", method.GetGenericArguments().Select(argument => argument.Name)) + "&gt;";
         }
         var parameters = ParametersOf(method).Select(parameter => new BusinessParameter(parameter.Name!,
-            Reference(parameter.ParameterType, nullability.Create(parameter)), comments.Tag(method, "param", parameter.Name)));
+            Reference(parameter.ParameterType, nullability.Create(parameter), TupleNames(parameter)), comments.Tag(method, "param", parameter.Name)));
         var tests = requirements.Where(item => owner.IsDefined(typeof(ManagerAttribute), false) && item.Manager == owner && item.Operation == method.Name)
             .Select(item => new BusinessRequirement(Node(item.Test)));
-        return new(node with { Name = name }, [.. parameters], Reference(result, info), comments.Tag(method, "returns"), [.. tests]);
+        return new(node with { Name = name }, [.. parameters], Reference(result, info, TupleNames(method.ReturnParameter)), comments.Tag(method, "returns"), [.. tests]);
     }
 
     private static EventInfo[] EventsOf(Type type)
@@ -160,25 +160,50 @@ internal sealed class AssemblyReader
         })];
     }
 
-    private TypeReference Reference(Type type, NullabilityInfo? info = null)
+    private static Queue<string?>? TupleNames(ICustomAttributeProvider provider)
+    {
+        var attribute = provider.GetCustomAttributes(typeof(TupleElementNamesAttribute), false)
+            .Cast<TupleElementNamesAttribute>().SingleOrDefault();
+        return attribute is null ? null : new(attribute.TransformNames);
+    }
+
+    private TypeReference Reference(Type type, NullabilityInfo? info = null, Queue<string?>? tupleNames = null)
     {
         if (type.IsByRef || type.IsPointer)
         {
-            return Reference(type.GetElementType()!, info?.ElementType);
+            return Reference(type.GetElementType()!, info?.ElementType, tupleNames);
         }
         if (type.IsArray)
         {
-            return new("", null, [Reference(type.GetElementType()!, info?.ElementType)],
+            return new("", null, [Reference(type.GetElementType()!, info?.ElementType, tupleNames)],
                 "[" + new string(',', type.GetArrayRank() - 1) + "]" + NullableSuffix(type, info));
         }
         if (Nullable.GetUnderlyingType(type) is { } underlying)
         {
-            return new("", null, [Reference(underlying, info?.GenericTypeArguments.FirstOrDefault())], "?");
+            return new("", null, [Reference(underlying, info, tupleNames)], "?");
         }
         var definition = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
+        if (type.IsGenericType && definition.FullName!.StartsWith("System.ValueTuple`", StringComparison.Ordinal))
+        {
+            var types = type.GetGenericArguments();
+            var count = TupleElementCount(type);
+            var names = Enumerable.Range(0, count).Select(_ => tupleNames?.Count > 0 ? tupleNames.Dequeue() : null).ToArray();
+            var elements = types.Select((argument, index) => Reference(argument,
+                info?.GenericTypeArguments.ElementAtOrDefault(index), tupleNames)).ToArray();
+            // The eighth CLR argument holds the remaining elements of a long tuple.
+            var flattened = types.Length == 8 ? elements.Take(7).Concat(elements[7].Arguments) : elements.AsEnumerable();
+            return new("(", null, [.. flattened.Select((element, index) => names[index] is { } name
+                ? new TypeReference("", null, [element], " " + name) : element)], "");
+        }
         return new(type == typeof(void) ? "void" : DisplayName(type), models.Contains(definition) ? Id(definition) : null,
             type.IsGenericType ? [.. type.GetGenericArguments().Select((argument, index) =>
-                Reference(argument, info?.GenericTypeArguments.ElementAtOrDefault(index)))] : [], NullableSuffix(type, info));
+                Reference(argument, info?.GenericTypeArguments.ElementAtOrDefault(index), tupleNames))] : [], NullableSuffix(type, info));
+    }
+
+    private static int TupleElementCount(Type type)
+    {
+        var arguments = type.GetGenericArguments();
+        return arguments.Length == 8 ? 7 + TupleElementCount(arguments[7]) : arguments.Length;
     }
 
     private static bool Excluded(Type type)
@@ -259,8 +284,12 @@ internal sealed class AssemblyReader
 
     internal static IEnumerable<MethodInfo> MethodsOf(Type type)
     {
+        var equalityMethods = type.GetInterfaces()
+            .Where(item => item.IsGenericType && item.GetGenericTypeDefinition() == typeof(IEquatable<>))
+            .SelectMany(item => type.GetInterfaceMap(item).TargetMethods).ToHashSet();
         return type.GetMethods(PublicMembers)
-            .Where(method => !method.IsSpecialName && method.DeclaringType != typeof(object)
+            .Where(method => !method.IsSpecialName && method.GetBaseDefinition().DeclaringType != typeof(object)
+                && !equalityMethods.Contains(method)
                 && !method.IsDefined(typeof(CompilerGeneratedAttribute), false))
             .OrderBy(method => method.MetadataToken);
     }

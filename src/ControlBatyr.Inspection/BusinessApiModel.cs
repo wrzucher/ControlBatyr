@@ -30,5 +30,5 @@ public sealed record BusinessRequirement(BusinessNode Node);
 
 public sealed record BusinessConnection(BusinessNode Node, string EventId, string TargetDomainId);
 
-// An empty name wraps an element type (arrays and nullable value types) using Suffix.
+// An empty name wraps an element type using Suffix; "(" groups tuple elements in Arguments.
 public sealed record TypeReference(string Name, string? ModelId, ImmutableArray<TypeReference> Arguments, string Suffix);
