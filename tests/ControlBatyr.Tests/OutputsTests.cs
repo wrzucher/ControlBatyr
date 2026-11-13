@@ -30,12 +30,104 @@ public sealed class OutputsTests : IDisposable
     }
 
     [Fact]
+    public async Task Mermaid_shows_operations_models_events_and_identifiers_in_domain_overviews()
+    {
+        Assert.Equal(0, (await Run("markdown;mermaid")).Code);
+        var diagram = File.ReadAllText(Path.Combine(directory, "game.md"));
+        var model = BusinessApiReader.Read(null, ProductTypes.Find(typeof(Game.Tests.GameRequirements).Assembly)
+            .Select(type => type.Assembly).Distinct().ToArray());
+        var domain = model.Domains.Single(item => item.Name == "Game");
+
+        Assert.Contains("## Diagram\n\n```mermaid\nclassDiagram\n%% @arch/1 diagram profile=class-v1\n", diagram);
+        foreach (var operation in domain.Operations)
+        {
+            Assert.Contains("+" + operation.Node.Name + "()", diagram);
+        }
+        Assert.Contains("<<event>>", diagram);
+        Assert.Contains(" : raises PlaceBet", diagram);
+        Assert.Contains(" : on\n", diagram);
+        Assert.Contains("<<record>>", diagram);
+        Assert.Contains("<<enumeration>>", diagram);
+        Assert.Contains("+Guid BetId", diagram);
+        Assert.Contains("%% @arch/1 type id=\"" + domain.Node.Id + "\"\nclass ", diagram);
+        var recordDiagram = File.ReadAllText(Path.Combine(directory, "account.md"));
+        Assert.Contains("[\"BetRefunded\"] {\n    <<event>>\n", recordDiagram);
+        Assert.Contains("+decimal Amount", recordDiagram);
+        Assert.Contains(" : on\n", recordDiagram);
+        Assert.Contains("%% @arch/1 type id=\"A:Game.Core|T:Game.Core.BetRefunded\"\nclass ", recordDiagram);
+        Assert.DoesNotContain("## Diagram", File.ReadAllText(Path.Combine(directory, "game.reference.md")));
+    }
+
+    [Fact]
+    public void Mermaid_includes_an_event_raised_from_another_domain()
+    {
+        var model = BusinessApiReader.Read(null, ProductTypes.Find(typeof(Game.Tests.GameRequirements).Assembly)
+            .Select(type => type.Assembly).Distinct().ToArray());
+        var domain = model.Domains.Single(item => item.Name == "Game");
+        var refunded = model.Domains.Single(item => item.Name == "Account").RecordEvents.Single();
+        var operation = domain.Operations[0] with { Raises = [refunded.Node.Id] };
+        domain = domain with { Operations = [operation] };
+
+        var diagram = MermaidRenderer.Render(model, domain);
+
+        Assert.Contains("[\"BetRefunded\"] {\n    <<event>>", diagram);
+        Assert.Contains("%% @arch/1 type id=\"" + refunded.Node.Id + "\"\nclass ", diagram);
+        Assert.Contains(" : raises CreateGame\n", diagram);
+    }
+
+    [Fact]
+    public void Mermaid_uses_safe_class_keys_and_tildes_for_generic_properties()
+    {
+        var model = BusinessApiReader.Read(null, ProductTypes.Find(typeof(Game.Tests.GameRequirements).Assembly)
+            .Select(type => type.Assembly).Distinct().ToArray());
+        var domain = model.Domains.Single(item => item.Name == "Game");
+        var bet = model.Models.Single(item => item.Node.Name == "Bet");
+        var property = bet.Properties[0] with
+        {
+            Type = new("List", null, [new("Bet", bet.Node.Id, [], "")], "")
+        };
+        var changed = bet with { Node = bet.Node with { Name = "class" }, Properties = [property] };
+        model = model with { Models = model.Models.Replace(bet, changed) };
+
+        var diagram = MermaidRenderer.Render(model, domain);
+
+        Assert.Contains("[\"class\"] {", diagram);
+        Assert.DoesNotContain("class class", diagram);
+        Assert.Contains("+List~Bet~ Id", diagram);
+        Assert.DoesNotContain("&lt;", diagram);
+        Assert.Contains("%% @arch/1 type id=\"" + bet.Node.Id + "\"\nclass ", diagram);
+    }
+
+    [Fact]
+    public async Task Mermaid_is_off_unless_selected_and_can_be_switched_off_again()
+    {
+        Assert.Equal(0, (await Run("markdown;model")).Code);
+        Assert.DoesNotContain("## Diagram", File.ReadAllText(Path.Combine(directory, "game.md")));
+        Assert.Equal(0, (await Run("markdown;model;mermaid")).Code);
+        Assert.NotEqual(0, (await Run("markdown;model", check: true)).Code);
+        Assert.Equal(0, (await Run("markdown;model")).Code);
+        Assert.DoesNotContain("## Diagram", File.ReadAllText(Path.Combine(directory, "game.md")));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Mermaid_without_markdown_writes_and_checks_nothing_and_explains_why(bool check)
+    {
+        var result = await Run("mermaid", check);
+
+        Assert.Equal(0, result.Code);
+        Assert.Contains("mermaid requires markdown", result.Output);
+        Assert.False(Directory.Exists(directory));
+    }
+
+    [Fact]
     public async Task Unknown_names_fail_clearly_before_writing()
     {
         var result = await Run("markdown;unknown");
 
         Assert.NotEqual(0, result.Code);
-        Assert.Contains("Unknown ControlBatyrOutputs name(s): unknown. Known names: markdown, model.", result.Error);
+        Assert.Contains("Unknown ControlBatyrOutputs name(s): unknown. Known names: markdown, model, mermaid.", result.Error);
         Assert.False(Directory.Exists(directory));
     }
 
@@ -88,7 +180,7 @@ public sealed class OutputsTests : IDisposable
         Assert.Equal("Stale enabled output\n", File.ReadAllText(Path.Combine(directory, enabledFile)));
     }
 
-    private async Task<(int Code, string Error)> Run(string outputs, bool check = false)
+    private async Task<(int Code, string Error, string Output)> Run(string outputs, bool check = false)
     {
         var lists = directory + "-lists";
         Directory.CreateDirectory(lists);
@@ -110,8 +202,7 @@ public sealed class OutputsTests : IDisposable
             var output = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
             var error = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
             await process.WaitForExitAsync(TestContext.Current.CancellationToken);
-            await output;
-            return (process.ExitCode, await error);
+            return (process.ExitCode, await error, await output);
         }
         finally
         {

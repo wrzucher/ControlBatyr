@@ -53,7 +53,7 @@ code, with the code as the single source of truth**. [D]
 | Publisher and record events `[Event<TManager>]`, `[Raises<T>]`; domain connections `[On<T>]`; startup wiring | `ControlBatyr`; `ControlBatyr.Connections` | done |
 | Business API model with identifiers, written as `business-api.json` | `ControlBatyr.Inspection` | done |
 | Business API documents regenerated at build, one file per domain, OpenAPI-like | `ControlBatyr.Inspection` | done |
-| Outputs are settings: `ControlBatyrOutputs` selects `markdown` and `model` in the documentation folder | `ControlBatyr.Inspection` | done |
+| Outputs are settings: `ControlBatyrOutputs` selects `markdown`, `model`, and opt-in `mermaid` in the documentation folder | `ControlBatyr.Inspection` | done |
 | Requirements from tests `[Requirement<T>]` | `ControlBatyr.Requirements` | done |
 | Shape rules CB0001–CB0007 | `ControlBatyr.Rules` | done, optional |
 | Packages and a package smoke test | — | published as previews on nuget.org by a version tag |
@@ -69,7 +69,7 @@ Each step is a separate pull request.
 |---|---|---|
 | 1 | ~~The model.~~ Done. | — |
 | 2 | ~~ControlBatyr documents itself.~~ Postponed [P]: the library has no managers; marking a reader as a manager would be a lie. It needs a second reader (see "Profiles") and gives little value now. | — |
-| 3 | **Class diagram** (Mermaid) per domain from the model, following the architecture diagram profile (`classDiagram` + `%% @arch/1` directives) where GitHub can render it. | Diagrams are in the documents and render on GitHub |
+| 3 | ~~Class diagram (Mermaid) per domain from the model, with `classDiagram` and `%% @arch/1` directives.~~ Done. | Opt-in diagrams are in the sample documents using GitHub-supported syntax |
 | 4 | **Extension points.** An extension can add nodes and links to the model (Reqnroll scenarios, handwritten documents) and add output. | Reqnroll scenarios with a tag appear as requirements through an extension, without changes in the core |
 | 5 | **Publish to NuGet** and try on a real product. | Owner's word |
 | 6 | **AI extension** (`Microsoft.Extensions.AI`, `IChatClient`): a separate project and command; prompt provider; generated statements carry the identifiers they are grounded on; stale statements are detected by the fingerprint of their grounds. | To be discussed before work |

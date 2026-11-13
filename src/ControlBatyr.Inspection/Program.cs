@@ -4,12 +4,12 @@ using ControlBatyr.Inspection;
 
 try
 {
-    if (args.Length is not (5 or 6))
+    if (args.Length != 6)
     {
-        throw new ArgumentException("Usage: ControlBatyr.Inspection <documentation folder> <assembly list file> <reference list file> <rules assembly or empty> <check documents> [outputs]");
+        throw new ArgumentException("Usage: ControlBatyr.Inspection <documentation folder> <assembly list file> <reference list file> <rules assembly or empty> <check documents> <outputs>");
     }
 
-    var outputs = Outputs.Select(args.Length == 6 ? args[5] : "markdown;model");
+    var outputs = Outputs.Select(args[5]);
     var assemblies = File.ReadAllLines(args[1]).Where(line => !string.IsNullOrWhiteSpace(line)).Select(Path.GetFullPath).ToArray();
     if (assemblies.Length == 0)
     {
@@ -43,11 +43,21 @@ try
     bool IsEnabled(string file) => outputs.Any(output => output.Owns(file));
     if (args[4].Equals("true", StringComparison.OrdinalIgnoreCase))
     {
-        if (outputs.Length > 0) GeneratedFiles.Check(directory, documents, IsEnabled);
+        if (outputs.Any(output => output.Name != "mermaid"))
+        {
+            GeneratedFiles.Check(directory, documents, IsEnabled);
+        }
     }
     else
     {
-        if (outputs.Length > 0) GeneratedFiles.Write(directory, documents, IsEnabled);
+        if (outputs.Any(output => output.Name != "mermaid"))
+        {
+            GeneratedFiles.Write(directory, documents, IsEnabled);
+        }
+    }
+    if (outputs.Any(output => output.Name == "mermaid") && !outputs.Any(output => output.Name == "markdown"))
+    {
+        Console.WriteLine("ControlBatyr: mermaid requires markdown; no diagrams written because they live inside Markdown pages.");
     }
     Console.WriteLine($"ControlBatyr: {(args[4].Equals("true", StringComparison.OrdinalIgnoreCase) ? "checked" : "generated")} {documents.Length} business API documents in {directory}.");
     return 0;

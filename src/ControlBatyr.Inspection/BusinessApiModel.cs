@@ -21,7 +21,10 @@ public sealed record BusinessParameter(string Name, TypeReference Type, string D
 public sealed record BusinessEvent(BusinessNode Node, ImmutableArray<TypeReference> Payloads);
 
 public sealed record BusinessModel(BusinessNode Node, bool IsEnum, ImmutableArray<BusinessProperty> Properties,
-    ImmutableArray<BusinessOperation> Methods, ImmutableArray<BusinessEnumValue> Values);
+    ImmutableArray<BusinessOperation> Methods, ImmutableArray<BusinessEnumValue> Values)
+{
+    public bool IsRecord { get; init; }
+}
 
 public sealed record BusinessProperty(BusinessNode Node, TypeReference Type, bool Computed);
 

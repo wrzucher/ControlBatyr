@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../../src/ControlBatyr.Inspection/build/ControlBatyr.Inspection.props" />
   <PropertyGroup>
+    <ControlBatyrOutputs>markdown;model;mermaid</ControlBatyrOutputs>
     <ControlBatyrDocumentationDirectory>../docs/business-api</ControlBatyrDocumentationDirectory>
     <ControlBatyrRulesPath>../../src/ControlBatyr.Rules/bin/$(Configuration)/net10.0/ControlBatyr.Rules.dll</ControlBatyrRulesPath>
     <ControlBatyrToolPath>../../src/ControlBatyr.Inspection/bin/$(Configuration)/net10.0/ControlBatyr.Inspection.dll</ControlBatyrToolPath>
