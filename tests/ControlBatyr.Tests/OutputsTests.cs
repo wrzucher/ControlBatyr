@@ -48,11 +48,16 @@ public sealed class OutputsTests : IDisposable
         Assert.Contains(" : on\n", diagram);
         Assert.Contains("<<record>>", diagram);
         Assert.Contains("<<enumeration>>", diagram);
-        Assert.Contains("+Guid BetId", diagram);
+        Assert.DoesNotContain("[\"BetState\"]", diagram);
+        Assert.DoesNotContain("[\"BetCancelledEventArgs\"]", diagram);
+        Assert.DoesNotContain("[\"BetPlacedEventArgs\"]", diagram);
+        Assert.All(diagram.Split('\n').Where(line => line.StartsWith("    +", StringComparison.Ordinal)),
+            line => Assert.EndsWith("()", line));
         Assert.Contains("%% @arch/1 type id=\"" + domain.Node.Id + "\"\nclass ", diagram);
         var recordDiagram = File.ReadAllText(Path.Combine(directory, "account.md"));
-        Assert.Contains("[\"BetRefunded\"] {\n    <<event>>\n", recordDiagram);
-        Assert.Contains("+decimal Amount", recordDiagram);
+        Assert.Contains("[\"BetRefunded\"] {\n    <<event>>\n}", recordDiagram);
+        Assert.All(recordDiagram.Split('\n').Where(line => line.StartsWith("    +", StringComparison.Ordinal)),
+            line => Assert.EndsWith("()", line));
         Assert.Contains(" : on\n", recordDiagram);
         Assert.Contains("%% @arch/1 type id=\"A:Game.Core|T:Game.Core.BetRefunded\"\nclass ", recordDiagram);
         Assert.DoesNotContain("## Diagram", File.ReadAllText(Path.Combine(directory, "game.reference.md")));
@@ -76,25 +81,34 @@ public sealed class OutputsTests : IDisposable
     }
 
     [Fact]
-    public void Mermaid_uses_safe_class_keys_and_tildes_for_generic_properties()
+    public void Mermaid_unwraps_signature_types_and_uses_safe_class_keys_without_model_members()
     {
         var model = BusinessApiReader.Read(null, ProductTypes.Find(typeof(Game.Tests.GameRequirements).Assembly)
             .Select(type => type.Assembly).Distinct().ToArray());
         var domain = model.Domains.Single(item => item.Name == "Game");
         var bet = model.Models.Single(item => item.Node.Name == "Bet");
-        var property = bet.Properties[0] with
-        {
-            Type = new("List", null, [new("Bet", bet.Node.Id, [], "")], "")
-        };
-        var changed = bet with { Node = bet.Node with { Name = "class" }, Properties = [property] };
+        var state = model.Models.Single(item => item.Node.Name == "BetState");
+        var changed = bet with { Node = bet.Node with { Name = "class" } };
         model = model with { Models = model.Models.Replace(bet, changed) };
+        var operation = domain.Operations[0] with
+        {
+            Parameters = [new("bets", new("", null, [new("Bet", bet.Node.Id, [], "?")], "[]"), "")],
+            ReturnType = new("Task", null, [new("IReadOnlyList", null,
+                [new("", null, [new("BetState", state.Node.Id, [], "")], "?")], "")], "")
+        };
+        domain = domain with { Operations = [operation], Publishers = [], RecordEvents = [] };
+        model = model with { Connections = [] };
 
         var diagram = MermaidRenderer.Render(model, domain);
 
-        Assert.Contains("[\"class\"] {", diagram);
+        Assert.Contains("class C1[\"class\"] {\n    <<record>>\n}", diagram);
+        Assert.Contains("class C2[\"BetState\"] {\n    <<enumeration>>\n}", diagram);
         Assert.DoesNotContain("class class", diagram);
-        Assert.Contains("+List~Bet~ Id", diagram);
-        Assert.DoesNotContain("&lt;", diagram);
+        Assert.Contains("C0 ..> C1\n", diagram);
+        Assert.Contains("C0 ..> C2\n", diagram);
+        Assert.Equal(3, diagram.Split('\n').Count(line => line.StartsWith("class ", StringComparison.Ordinal)));
+        Assert.All(diagram.Split('\n').Where(line => line.StartsWith("    +", StringComparison.Ordinal)),
+            line => Assert.EndsWith("()", line));
         Assert.Contains("%% @arch/1 type id=\"" + bet.Node.Id + "\"\nclass ", diagram);
     }
 

@@ -56,66 +56,30 @@ class C0["GameManager"] {
 %% @arch/1 type id="A:Game.Model|T:Game.Model.Bet"
 class C1["Bet"] {
     <<record>>
-    +Guid Id
-    +Guid GameId
-    +Guid PlayerId
-    +decimal Amount
-    +BetState State
-    +DateTimeOffset GameStartsAt
-    +bool IsOpen
-}
-%% @arch/1 type id="A:Game.Model|T:Game.Model.BetCancelledEventArgs"
-class C2["BetCancelledEventArgs"] {
-    <<record>>
-    +Guid BetId
-    +Guid PlayerId
-    +decimal Amount
-}
-%% @arch/1 type id="A:Game.Model|T:Game.Model.BetPlacedEventArgs"
-class C3["BetPlacedEventArgs"] {
-    <<record>>
-    +Bet Bet
-}
-%% @arch/1 type id="A:Game.Model|T:Game.Model.BetState"
-class C4["BetState"] {
-    <<enumeration>>
-    +Open
-    +Cancelled
 }
 %% @arch/1 type id="A:Game.Model|T:Game.Model.Game"
-class C5["Game"] {
+class C2["Game"] {
     <<record>>
-    +Guid Id
-    +string Name
-    +DateTimeOffset StartsAt
 }
 %% @arch/1 type id="A:Game.Model|T:Game.Model.ServiceErrorCode"
-class C6["ServiceErrorCode"] {
+class C3["ServiceErrorCode"] {
     <<enumeration>>
-    +GameNotFound
-    +GameStarted
-    +BetNotFound
-    +BetAlreadyCancelled
 }
 %% @arch/1 type id="A:Game.Core|E:Game.Core.GameEventPublisher.BetPlaced"
-class C7["BetPlaced"] {
+class C4["BetPlaced"] {
     <<event>>
-    +Bet Bet
 }
 %% @arch/1 type id="A:Game.Core|E:Game.Core.GameEventPublisher.BetCancelled"
-class C8["BetCancelled"] {
+class C5["BetCancelled"] {
     <<event>>
-    +Guid BetId
-    +Guid PlayerId
-    +decimal Amount
 }
 %% @arch/1 type id="A:Game.Core|T:Game.Core.AccountManager"
-class C9["Account"] {
+class C6["Account"] {
 }
-C0 ..> C5
+C0 ..> C2
 C0 ..> C1
-C0 ..> C6
-C0 ..> C7 : raises PlaceBet
-C0 ..> C8 : raises CancelBet
-C8 ..> C9 : on
+C0 ..> C3
+C0 ..> C4 : raises PlaceBet
+C0 ..> C5 : raises CancelBet
+C5 ..> C6 : on
 ```

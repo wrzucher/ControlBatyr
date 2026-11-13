@@ -43,9 +43,9 @@ build and adds no runtime dependency. Reference Inspection directly in each proj
 Known names are `markdown`, `model`, and `mermaid`; disabled outputs are kept, and removing their files is the product's choice.
 Add `mermaid` (for example, `markdown;model;mermaid`) for a `## Diagram` class diagram in each domain overview.
 It is off by default and requires `markdown`; without it, no diagrams are written and the build explains why.
-Operations show names only; `raises` edges include the operation name. Models show properties, records and enums
-carry stereotypes, and events show payload properties. Other domains appear by domain name on `on` edges.
-Single-argument generics use Mermaid tildes (`List~Bet~`); multi-argument generics show the type name and tuples show `Tuple`.
+The diagram is a compact overview: operations, events and direct signature models, with no payload or model members.
+Operations show names only; `raises` edges include the operation name. Records and enums carry stereotypes.
+Other domains appear by domain name on `on` edges.
 
 The comment `%% @arch/1 diagram profile=class-v1` identifies the diagram profile. Immediately before each class,
 `%% @arch/1 type id="..."` preserves its business model identifier (including publisher event member identifiers).

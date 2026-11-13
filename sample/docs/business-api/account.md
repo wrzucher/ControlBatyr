@@ -22,8 +22,6 @@ Holds players' funds and returns cancelled bet amounts.
 
 ## Models
 
-- [BetRefunded](account.reference.md#type-game-core-betrefunded) — A cancelled bet amount was returned to the player.
-
 - [Account](account.reference.md#type-game-model-account) — The funds available to a player.
 
 ## Diagram
@@ -40,31 +38,16 @@ class C0["AccountManager"] {
 %% @arch/1 type id="A:Game.Model|T:Game.Model.Account"
 class C1["Account"] {
     <<record>>
-    +Guid PlayerId
-    +decimal Balance
-}
-%% @arch/1 type id="A:Game.Model|T:Game.Model.BetCancelledEventArgs"
-class C2["BetCancelledEventArgs"] {
-    <<record>>
-    +Guid BetId
-    +Guid PlayerId
-    +decimal Amount
 }
 %% @arch/1 type id="A:Game.Core|T:Game.Core.BetRefunded"
-class C3["BetRefunded"] {
+class C2["BetRefunded"] {
     <<event>>
-    +Guid PlayerId
-    +Guid BetId
-    +decimal Amount
 }
 %% @arch/1 type id="A:Game.Core|E:Game.Core.GameEventPublisher.BetCancelled"
-class C4["BetCancelled"] {
+class C3["BetCancelled"] {
     <<event>>
-    +Guid BetId
-    +Guid PlayerId
-    +decimal Amount
 }
 C0 ..> C1
-C0 ..> C3 : raises RefundBet
-C4 ..> C0 : on
+C0 ..> C2 : raises RefundBet
+C3 ..> C0 : on
 ```

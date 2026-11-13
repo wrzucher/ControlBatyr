@@ -8,7 +8,6 @@ internal static class MermaidRenderer
     {
         var output = new StringBuilder("classDiagram\n%% @arch/1 diagram profile=class-v1\n");
         var keys = new Dictionary<string, string>(StringComparer.Ordinal);
-        var models = model.Models.ToDictionary(item => item.Node.Id);
         var ownEvents = domain.Publishers.SelectMany(publisher => publisher.Events).Concat(domain.RecordEvents).ToArray();
         var eventIds = ownEvents.Select(item => item.Node.Id).Concat(domain.Operations.SelectMany(operation => operation.Raises))
             .ToHashSet(StringComparer.Ordinal);
@@ -18,36 +17,17 @@ internal static class MermaidRenderer
             .Concat(item.RecordEvents)).Where(item => eventIds.Contains(item.Node.Id)
                 || connections.Any(connection => connection.EventId == item.Node.Id)))
             .DistinctBy(item => item.Node.Id).ToArray();
-        var used = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var operation in domain.Operations)
-        {
-            Discover(operation.ReturnType);
-            foreach (var parameter in operation.Parameters)
-            {
-                Discover(parameter.Type);
-            }
-        }
         var signatureModels = domain.Operations.SelectMany(operation => operation.Parameters.Select(parameter => parameter.Type)
-            .Prepend(operation.ReturnType)).SelectMany(References).Distinct().ToArray();
-        foreach (var item in events)
-        {
-            foreach (var payload in item.Payloads)
-            {
-                Discover(payload);
-            }
-        }
+            .Prepend(operation.ReturnType)).SelectMany(References).ToHashSet(StringComparer.Ordinal);
         Class(domain.Node, domain.Node.Name, null, domain.Operations.Select(operation => Name(operation.Node.Name) + "()"));
-        foreach (var item in model.Models.Where(item => used.Contains(item.Node.Id) && !events.Any(e => e.Node.Id == item.Node.Id)))
+        foreach (var item in model.Models.Where(item => signatureModels.Contains(item.Node.Id) && !events.Any(e => e.Node.Id == item.Node.Id)))
         {
             Class(item.Node, item.Node.Name, item.IsEnum ? "enumeration" : item.IsRecord ? "record" : null,
-                item.IsEnum ? item.Values.Select(value => value.Node.Name) : Properties(item));
+                []);
         }
         foreach (var item in events)
         {
-            var properties = models.TryGetValue(item.Node.Id, out var record) ? Properties(record)
-                : item.Payloads.SelectMany(payload => payload.ModelId is { } id && models.TryGetValue(id, out var data)
-                    ? Properties(data) : new[] { TypeName(payload) + " payload" });
-            Class(item.Node, item.Node.Name, "event", properties);
+            Class(item.Node, item.Node.Name, "event", []);
         }
         foreach (var target in model.Domains.Where(target => target.Node.Id != domain.Node.Id
             && connections.Any(connection => connection.TargetDomainId == target.Node.Id)))
@@ -70,27 +50,6 @@ internal static class MermaidRenderer
             Edge(connection.EventId, connection.TargetDomainId, "on");
         }
         return output.ToString();
-
-        void Discover(TypeReference type)
-        {
-            foreach (var argument in type.Arguments)
-            {
-                Discover(argument);
-            }
-            if (type.ModelId is not { } id || !used.Add(id))
-            {
-                return;
-            }
-            foreach (var property in models[id].Properties)
-            {
-                Discover(property.Type);
-            }
-            foreach (var typeReference in models[id].Methods.SelectMany(operation => operation.Parameters.Select(parameter => parameter.Type)
-                .Prepend(operation.ReturnType)))
-            {
-                Discover(typeReference);
-            }
-        }
 
         void Class(BusinessNode node, string label, string? stereotype, IEnumerable<string> members)
         {
@@ -122,23 +81,6 @@ internal static class MermaidRenderer
 
     private static IEnumerable<string> References(TypeReference type) =>
         (type.ModelId is { } id ? new[] { id } : []).Concat(type.Arguments.SelectMany(References));
-
-    private static IEnumerable<string> Properties(BusinessModel model) =>
-        model.Properties.Select(property => TypeName(property.Type) + " " + Name(property.Node.Name));
-
-    private static string TypeName(TypeReference type)
-    {
-        if (type.Name.Length == 0)
-        {
-            return TypeName(type.Arguments.Single()) + type.Suffix;
-        }
-        // Mermaid cannot represent generic argument lists containing commas or tuple member syntax.
-        if (type.Name == "(")
-        {
-            return "Tuple" + type.Suffix;
-        }
-        return Name(type.Name) + (type.Arguments.Length == 1 ? "~" + TypeName(type.Arguments[0]) + "~" : "") + type.Suffix;
-    }
 
     private static string Name(string name) => new(name.TakeWhile(character => character != '&' && character != '`')
         .Select(character => char.IsLetterOrDigit(character) || character == '_' ? character : '_').ToArray());
