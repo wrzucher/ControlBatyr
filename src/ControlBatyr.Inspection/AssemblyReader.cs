@@ -10,7 +10,6 @@ internal sealed class AssemblyReader
     private const BindingFlags PublicMembers = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
     private readonly HashSet<Type> models = [];
     private readonly XmlComments comments = new();
-    private readonly NullabilityInfoContext nullability = new();
     private readonly string? documentDirectory;
     private readonly Domain[] domains;
     private readonly Connection[] connections;
@@ -29,14 +28,14 @@ internal sealed class AssemblyReader
             .SelectMany(assembly => assembly.GetTypes().OrderBy(type => type.MetadataToken))
             .Where(type => !Excluded(type)).ToArray();
         requirements = RequirementLinks.Find(types).ToArray();
-        suppliedPublishers = types.Where(type => type.IsDefined(typeof(EventPublisherAttribute), false)).ToHashSet();
-        domains = types.Where(type => type.IsDefined(typeof(ManagerAttribute), false)).Select(manager =>
+        suppliedPublishers = types.Where(type => type.HasAttribute<EventPublisherAttribute>()).ToHashSet();
+        domains = types.Where(type => type.HasAttribute<ManagerAttribute>()).Select(manager =>
         {
             models.Clear();
             DiscoverMethods(manager);
             var publishers = manager.GetConstructors().SelectMany(constructor => constructor.GetParameters())
                 .Select(parameter => parameter.ParameterType)
-                .Where(type => type.IsDefined(typeof(EventPublisherAttribute), false)).Distinct().ToArray();
+                .Where(type => type.HasAttribute<EventPublisherAttribute>()).Distinct().ToArray();
             foreach (var parameter in publishers.SelectMany(EventsOf).SelectMany(EventParameters))
             {
                 Discover(parameter.ParameterType);
@@ -110,14 +109,15 @@ internal sealed class AssemblyReader
         }
         var properties = DataOf(type).Select(member =>
         {
-            var info = member is PropertyInfo property ? nullability.Create(property) : nullability.Create((FieldInfo)member);
+            var info = member is PropertyInfo property ? NullableMetadata.Create(property) : NullableMetadata.Create((FieldInfo)member);
             return new BusinessProperty(Node(member), Reference(info.Type, info, TupleNames(member)), Computed(member));
         }).ToImmutableArray();
         return new(node, false, properties, Operations(type), [])
         {
             IsRecord = type.GetMethod("<Clone>$", BindingFlags.Public | BindingFlags.Instance) is not null
-                || type.GetMethod("PrintMembers", BindingFlags.NonPublic | BindingFlags.Instance, [typeof(System.Text.StringBuilder)])
-                    ?.IsDefined(typeof(CompilerGeneratedAttribute), false) == true
+                || type.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance).SingleOrDefault(method => method.Name == "PrintMembers"
+                    && method.GetParameters() is [var parameter] && parameter.ParameterType.IsType("System.Text.StringBuilder"))
+                    ?.HasAttribute<CompilerGeneratedAttribute>() == true
         };
     }
 
@@ -129,7 +129,7 @@ internal sealed class AssemblyReader
     private BusinessOperation Operation(Type owner, MethodInfo method)
     {
         var result = ReturnType(method.ReturnType);
-        var info = nullability.Create(method.ReturnParameter);
+        var info = NullableMetadata.Create(method.ReturnParameter);
         var node = Node(method);
         var name = method.Name;
         if (result != method.ReturnType)
@@ -145,8 +145,8 @@ internal sealed class AssemblyReader
             name += "&lt;" + string.Join(", ", method.GetGenericArguments().Select(argument => argument.Name)) + "&gt;";
         }
         var parameters = ParametersOf(method).Select(parameter => new BusinessParameter(parameter.Name!,
-            Reference(parameter.ParameterType, nullability.Create(parameter), TupleNames(parameter)), comments.Tag(method, "param", parameter.Name)));
-        var tests = requirements.Where(item => owner.IsDefined(typeof(ManagerAttribute), false) && item.Manager == owner && item.Operation == method.Name)
+            Reference(parameter.ParameterType, NullableMetadata.Create(parameter), TupleNames(parameter)), comments.Tag(method, "param", parameter.Name)));
+        var tests = requirements.Where(item => owner.HasAttribute<ManagerAttribute>() && item.Manager == owner && item.Operation == method.Name)
             .Select(item => new BusinessRequirement(Node(item.Test)));
         return new(node with { Name = name }, [.. parameters], Reference(result, info, TupleNames(method.ReturnParameter)),
             comments.Tag(method, "returns"), [.. tests], RaisedEvents(method));
@@ -156,7 +156,7 @@ internal sealed class AssemblyReader
     {
         return [.. method.CustomAttributes
             .Where(attribute => attribute.AttributeType.IsGenericType
-                && attribute.AttributeType.GetGenericTypeDefinition() == typeof(RaisesAttribute<>))
+                && attribute.AttributeType.GetGenericTypeDefinition().IsType("ControlBatyr.RaisesAttribute`1"))
             .Select(attribute =>
             {
                 var publisher = attribute.AttributeType.GetGenericArguments()[0];
@@ -190,7 +190,7 @@ internal sealed class AssemblyReader
 
     private static IEnumerable<Type> EventManagers(Type type) => type.CustomAttributes
         .Where(attribute => attribute.AttributeType.IsGenericType
-            && attribute.AttributeType.GetGenericTypeDefinition() == typeof(EventAttribute<>))
+            && attribute.AttributeType.GetGenericTypeDefinition().IsType("ControlBatyr.EventAttribute`1"))
         .Select(attribute => attribute.AttributeType.GetGenericArguments()[0]);
 
     private static EventInfo[] EventsOf(Type type)
@@ -207,26 +207,32 @@ internal sealed class AssemblyReader
         var handler = item.EventHandlerType!;
         var definition = handler.IsGenericType ? handler.GetGenericTypeDefinition() : handler;
         var declared = definition.GetMethod("Invoke")!.GetParameters();
-        var handlerInfo = nullability.Create(item);
+        var handlerInfo = NullableMetadata.Create(item);
         return [.. EventParameters(item).Select((parameter, index) =>
         {
             // Delegate annotations describe T?, while the event's arguments describe the actual payload.
             var declaredType = declared[index].ParameterType;
             var info = declaredType.IsGenericParameter
                 ? handlerInfo.GenericTypeArguments.ElementAtOrDefault(declaredType.GenericParameterPosition)
-                : nullability.Create(parameter);
+                : NullableMetadata.Create(parameter);
             return Reference(parameter.ParameterType, info);
         })];
     }
 
     private static Queue<string?>? TupleNames(ICustomAttributeProvider provider)
     {
-        var attribute = provider.GetCustomAttributes(typeof(TupleElementNamesAttribute), false)
-            .Cast<TupleElementNamesAttribute>().SingleOrDefault();
-        return attribute is null ? null : new(attribute.TransformNames);
+        var attributes = provider switch
+        {
+            MemberInfo member => member.CustomAttributes,
+            ParameterInfo parameter => parameter.CustomAttributes,
+            _ => []
+        };
+        var attribute = attributes.SingleOrDefault(item => item.AttributeType.IsType("System.Runtime.CompilerServices.TupleElementNamesAttribute"));
+        return attribute is null ? null : new(((IEnumerable<CustomAttributeTypedArgument>)attribute.ConstructorArguments[0].Value!)
+            .Select(item => (string?)item.Value));
     }
 
-    private TypeReference Reference(Type type, NullabilityInfo? info = null, Queue<string?>? tupleNames = null)
+    private TypeReference Reference(Type type, NullableMetadata? info = null, Queue<string?>? tupleNames = null)
     {
         if (type.IsByRef || type.IsPointer)
         {
@@ -237,7 +243,7 @@ internal sealed class AssemblyReader
             return new("", null, [Reference(type.GetElementType()!, info?.ElementType, tupleNames)],
                 "[" + new string(',', type.GetArrayRank() - 1) + "]" + NullableSuffix(type, info));
         }
-        if (Nullable.GetUnderlyingType(type) is { } underlying)
+        if (MetadataTypes.NullableUnderlyingType(type) is { } underlying)
         {
             return new("", null, [Reference(underlying, info, tupleNames)], "?");
         }
@@ -254,7 +260,7 @@ internal sealed class AssemblyReader
             return new("(", null, [.. flattened.Select((element, index) => names[index] is { } name
                 ? new TypeReference("", null, [element], " " + name) : element)], "");
         }
-        return new(type == typeof(void) ? "void" : DisplayName(type), models.Contains(definition) ? Id(definition) : null,
+        return new(type.IsType("System.Void") ? "void" : DisplayName(type), models.Contains(definition) ? Id(definition) : null,
             type.IsGenericType ? [.. type.GetGenericArguments().Select((argument, index) =>
                 Reference(argument, info?.GenericTypeArguments.ElementAtOrDefault(index), tupleNames))] : [], NullableSuffix(type, info));
     }
@@ -267,11 +273,11 @@ internal sealed class AssemblyReader
 
     private static bool Excluded(Type type)
     {
-        return type.IsDefined(typeof(PersistenceAttribute), false);
+        return type.HasAttribute<PersistenceAttribute>();
     }
     private static bool Framework(Type type)
     {
-        return type.Assembly == typeof(string).Assembly
+        return type.Assembly.GetType("System.Object") is not null
         || type.Assembly.GetName().Name?.StartsWith("System.", StringComparison.Ordinal) == true;
     }
 
@@ -282,7 +288,7 @@ internal sealed class AssemblyReader
             Discover(type.GetElementType()!);
             return;
         }
-        if (type == typeof(void) || type == typeof(CancellationToken) || type == typeof(Task) || type == typeof(ValueTask)
+        if (type.IsType("System.Void") || type.IsType("System.Threading.CancellationToken") || type.IsType("System.Threading.Tasks.Task") || type.IsType("System.Threading.Tasks.ValueTask")
             || type.IsGenericParameter || Excluded(type))
         {
             return;
@@ -338,47 +344,65 @@ internal sealed class AssemblyReader
     private static bool Computed(MemberInfo member)
     {
         return member is PropertyInfo property
-            && property.SetMethod is null && !property.GetMethod!.IsDefined(typeof(CompilerGeneratedAttribute), false);
+            && property.SetMethod is null && !property.GetMethod!.HasAttribute<CompilerGeneratedAttribute>();
     }
 
     internal static IEnumerable<MethodInfo> MethodsOf(Type type)
     {
-        var equalityMethods = type.GetInterfaces()
-            .Where(item => item.IsGenericType && item.GetGenericTypeDefinition() == typeof(IEquatable<>))
-            .SelectMany(item => type.GetInterfaceMap(item).TargetMethods).ToHashSet();
+        var equalityTypes = type.GetInterfaces()
+            .Where(item => item.IsGenericType && item.GetGenericTypeDefinition().IsType("System.IEquatable`1"))
+            .Select(item => item.GetGenericArguments()[0]).ToHashSet();
         return type.GetMethods(PublicMembers)
-            .Where(method => !method.IsSpecialName && method.GetBaseDefinition().DeclaringType != typeof(object)
-                && !equalityMethods.Contains(method)
-                && !method.IsDefined(typeof(CompilerGeneratedAttribute), false))
+            .Where(method => !method.IsSpecialName && !ObjectMethod(method)
+                && !(method.Name == "Equals" && !method.IsStatic && !method.IsGenericMethod
+                    && method.ReturnType.IsType("System.Boolean") && method.GetParameters() is [var parameter]
+                    && equalityTypes.Contains(parameter.ParameterType))
+                && !method.HasAttribute<CompilerGeneratedAttribute>())
             .OrderBy(method => method.MetadataToken);
+    }
+
+    private static bool ObjectMethod(MethodInfo method)
+    {
+        if (method.DeclaringType.IsType("System.Object")) return true;
+        if (!method.IsVirtual || (method.Attributes & MethodAttributes.NewSlot) != 0) return false;
+        var parameters = method.GetParameters().Select(parameter => parameter.ParameterType).ToArray();
+        for (var parent = method.DeclaringType?.BaseType; parent is not null; parent = parent.BaseType)
+        {
+            var overridden = parent.GetMethods(PublicMembers | BindingFlags.DeclaredOnly)
+                .FirstOrDefault(candidate => candidate.IsVirtual && candidate.Name == method.Name
+                    && candidate.GetGenericArguments().Length == method.GetGenericArguments().Length
+                    && candidate.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(parameters));
+            if (overridden is not null) return ObjectMethod(overridden);
+        }
+        return false;
     }
 
     private static ParameterInfo[] ParametersOf(MethodInfo method)
     {
         return method.GetParameters()
-            .Where(parameter => parameter.ParameterType != typeof(CancellationToken)).ToArray();
+            .Where(parameter => !parameter.ParameterType.IsType("System.Threading.CancellationToken")).ToArray();
     }
 
     private static Type ReturnType(Type type)
     {
-        return type == typeof(Task) || type == typeof(ValueTask) ? typeof(void)
-            : type.IsGenericType && (type.GetGenericTypeDefinition() == typeof(Task<>) || type.GetGenericTypeDefinition() == typeof(ValueTask<>))
+        return type.IsType("System.Threading.Tasks.Task") || type.IsType("System.Threading.Tasks.ValueTask") ? type.Assembly.GetType("System.Void", throwOnError: true)!
+            : type.IsGenericType && (type.GetGenericTypeDefinition().IsType("System.Threading.Tasks.Task`1") || type.GetGenericTypeDefinition().IsType("System.Threading.Tasks.ValueTask`1"))
                 ? type.GetGenericArguments()[0] : type;
     }
 
     private static string DisplayName(Type type)
     {
-        return type == typeof(string) ? "string"
-            : type == typeof(bool) ? "bool" : type == typeof(decimal) ? "decimal"
-            : type == typeof(int) ? "int" : type == typeof(long) ? "long"
-            : type == typeof(short) ? "short" : type == typeof(byte) ? "byte"
-            : type == typeof(uint) ? "uint" : type == typeof(ulong) ? "ulong"
-            : type == typeof(ushort) ? "ushort" : type == typeof(sbyte) ? "sbyte"
-            : type == typeof(float) ? "float" : type == typeof(double) ? "double"
-            : type == typeof(char) ? "char" : type == typeof(object) ? "object" : type.Name.Split('`')[0];
+        return type.IsType("System.String") ? "string"
+            : type.IsType("System.Boolean") ? "bool" : type.IsType("System.Decimal") ? "decimal"
+            : type.IsType("System.Int32") ? "int" : type.IsType("System.Int64") ? "long"
+            : type.IsType("System.Int16") ? "short" : type.IsType("System.Byte") ? "byte"
+            : type.IsType("System.UInt32") ? "uint" : type.IsType("System.UInt64") ? "ulong"
+            : type.IsType("System.UInt16") ? "ushort" : type.IsType("System.SByte") ? "sbyte"
+            : type.IsType("System.Single") ? "float" : type.IsType("System.Double") ? "double"
+            : type.IsType("System.Char") ? "char" : type.IsType("System.Object") ? "object" : type.Name.Split('`')[0];
     }
 
-    private static string NullableSuffix(Type type, NullabilityInfo? info)
+    private static string NullableSuffix(Type type, NullableMetadata? info)
     {
         return !type.IsValueType && info?.ReadState == NullabilityState.Nullable ? "?" : "";
     }

@@ -106,18 +106,16 @@ if (Test-Path (Join-Path $output 'Markdig.dll')) {
 $references = Get-Content (Join-Path $consumer 'obj/Debug/net10.0/controlbatyr-references.txt')
 if (!($references | Where-Object { $_ -like '*Markdig.dll' }) -or
     !($references | Where-Object { $_ -like '*ProjectDependency.dll' }) -or
-    ($references | Where-Object { $_ -match '[/\\]ref[/\\]' })) {
-    throw 'Inspection must receive runtime NuGet and project assemblies, without reference assemblies.'
+    !($references | Where-Object { $_ -match '[/\\]ref[/\\].*System.Runtime.dll$' }) -or
+    !($references | Where-Object { $_ -like '*Microsoft.AspNetCore.Http.Abstractions.dll' })) {
+    throw 'Inspection must receive compile references, including target framework reference assemblies.'
 }
 $tool = Join-Path $cache "controlbatyr.inspection/$version/tools/net10.0/any/ControlBatyr.Inspection.dll"
-$legacy = & dotnet $tool (Join-Path $consumer 'legacy-docs') `
-    (Join-Path $consumer 'obj/Debug/net10.0/controlbatyr-assemblies.txt') `
-    (Join-Path $consumer 'obj/Debug/net10.0/copy-local-references.txt') '' false 'markdown;model' 2>&1
-if ($LASTEXITCODE -eq 0 -or ($legacy -join "`n") -notmatch "Could not load file or assembly 'Markdig") {
-    $legacy | Write-Output
-    throw 'The class library must reproduce the preview.3 copy-local-only resolution failure.'
+$toolConfig = Get-Content ([IO.Path]::ChangeExtension($tool, '.runtimeconfig.json')) -Raw
+if ($toolConfig.Contains('Microsoft.AspNetCore.App')) {
+    throw 'Inspection must not require the product shared framework.'
 }
-Write-Output 'PASS: copy-local-only resolution fails on Markdig; runtime assets generate documents for the class library.'
+Write-Output 'PASS: compile and framework reference assemblies generate documents; the tool requires only Microsoft.NETCore.App.'
 if ((Test-Path (Join-Path $output 'ControlBatyr.Inspection.dll')) -or
     (Get-Content (Join-Path $output 'Consumer.deps.json') -Raw).Contains('ControlBatyr.Inspection')) {
     throw 'Inspection must not be a consumer runtime dependency.'
@@ -177,6 +175,19 @@ Invoke-Dotnet restore $project --configfile (Join-Path $consumer 'NuGet.Config')
 Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:UseRules=true"
 Write-Output 'PASS: internal manager operations are documented with an ASP.NET Core framework dependency, with and without Rules.'
 Invoke-Dotnet restore $project --configfile (Join-Path $consumer 'NuGet.Config') --packages $cache "-p:ControlBatyrPackageVersion=$version"
+
+$consumerSource = Join-Path $consumer 'Consumer.cs'
+$originalSource = Get-Content $consumerSource -Raw
+try {
+    Set-Content $consumerSource ($originalSource.Replace('public sealed record Ticket(int Id);',
+        'public sealed record Ticket(int Id) { public Microsoft.AspNetCore.Http.SameSiteMode Mode { get; init; } }'))
+    Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version"
+    if (!(Get-Content $reference -Raw).Contains('SameSiteMode')) {
+        throw 'A model using a product-only shared framework type must be documented.'
+    }
+} finally { Set-Content $consumerSource $originalSource }
+Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version"
+Write-Output 'PASS: an ASP.NET model type is documented without an ASP.NET framework dependency in the tool.'
 
 Add-Content (Join-Path $consumer 'Consumer.cs') @'
 

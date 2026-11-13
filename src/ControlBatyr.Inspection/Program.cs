@@ -18,14 +18,10 @@ try
     var references = File.ReadAllLines(args[2]).Concat(assemblies)
         .Where(path => Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase))
         .Select(Path.GetFullPath).Distinct().ToArray();
-    AssemblyLoadContext.Default.Resolving += (_, name) =>
-    {
-        var path = references.FirstOrDefault(path => Path.GetFileNameWithoutExtension(path).Equals(name.Name, StringComparison.OrdinalIgnoreCase));
-        return path is null ? null : AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
-    };
+    using var context = new MetadataLoadContext(new PathAssemblyResolver(references), "System.Runtime");
     var directory = Path.GetFullPath(args[0]);
-    var cores = assemblies.Select(AssemblyLoadContext.Default.LoadFromAssemblyPath).ToArray();
-    var types = ProductTypes.Find(cores);
+    var cores = assemblies.Select(context.LoadFromAssemblyPath).ToArray();
+    var types = ProductTypes.Find(context.LoadFromAssemblyName, cores);
     var violations = string.IsNullOrEmpty(args[3]) ? [] :
         (IReadOnlyList<string>)AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[3]))
             .GetType("ControlBatyr.Inspection.Rules", throwOnError: true)!
@@ -64,12 +60,13 @@ try
 }
 catch (Exception exception)
 {
-    Console.Error.WriteLine($"ControlBatyr business API generation failed: {exception.Message}");
+    var failure = exception is TargetInvocationException { InnerException: { } inner } ? inner : exception;
+    Console.Error.WriteLine($"ControlBatyr business API generation failed: {failure.Message}");
     if (exception is ReflectionTypeLoadException loadException)
     {
-        foreach (var failure in loadException.LoaderExceptions)
+        foreach (var loaderFailure in loadException.LoaderExceptions)
         {
-            Console.Error.WriteLine(failure?.Message);
+            Console.Error.WriteLine(loaderFailure?.Message);
         }
     }
     return 1;

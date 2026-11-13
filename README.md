@@ -112,7 +112,8 @@ referenced cores, models and requirements;
 Adjacent XML comments and portable PDBs supply descriptions and source links.
 The sample runs both rules and generation in `Game.Tests`; `Game.Core` does not write documents.
 Generation runs after every build in a separate .NET 10 process, fails the build on error, and leaves
-unchanged files unwritten. The tool needs a .NET runtime compatible with the inspected product.
+unchanged files unwritten. The tool runs on .NET 10 and reads product metadata using compile and target framework references;
+it does not require the product shared frameworks or runtime assets.
 
 No packages are published. Build and verify all five locally with:
 

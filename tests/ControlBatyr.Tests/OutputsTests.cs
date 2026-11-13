@@ -203,7 +203,8 @@ public sealed class OutputsTests : IDisposable
             var assemblyList = Path.Combine(lists, "assemblies.txt");
             var referenceList = Path.Combine(lists, "references.txt");
             File.WriteAllText(assemblyList, typeof(Game.Tests.GameRequirements).Assembly.Location);
-            File.WriteAllLines(referenceList, Directory.GetFiles(AppContext.BaseDirectory, "*.dll"));
+            File.WriteAllLines(referenceList, Directory.GetFiles(AppContext.BaseDirectory, "*.dll")
+                .Concat(Directory.GetFiles(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "*.dll")));
             var testAssembly = typeof(OutputsTests).Assembly.Location;
             var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
             foreach (var argument in new[] { "exec", "--runtimeconfig", Path.ChangeExtension(testAssembly, ".runtimeconfig.json"),

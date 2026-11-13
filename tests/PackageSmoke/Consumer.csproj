@@ -18,8 +18,4 @@
     <PackageReference Include="ControlBatyr.Rules" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" Condition="'$(UseRules)' == 'true'" />
     <PackageReference Include="ControlBatyr.Inspection" Version="$(ControlBatyrPackageVersion)" PrivateAssets="all" />
   </ItemGroup>
-  <Target Name="CaptureCopyLocalReferences" AfterTargets="Build">
-    <WriteLinesToFile File="$(IntermediateOutputPath)copy-local-references.txt"
-                      Lines="@(ReferenceCopyLocalPaths->'%(FullPath)')" Overwrite="true" />
-  </Target>
 </Project>

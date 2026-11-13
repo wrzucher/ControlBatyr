@@ -114,6 +114,11 @@ Each step is a separate pull request.
   consumer (`GameManager` / `GameAdminManager`) breaks "a manager is the API of a domain". Wait for a real product
   to need it.
 
+## Completed technical debt
+
+- Step 21: inspection reads product metadata with `MetadataLoadContext`, using compile and target framework
+  reference assemblies. Product shared frameworks and NuGet runtime assets are no longer required by the tool.
+
 ## Critique we keep in mind
 
 - The library checks shape, not meaning: `Process(Guid id)` passes every rule.

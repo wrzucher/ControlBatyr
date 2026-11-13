@@ -10,14 +10,15 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackInspectionTool</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" PrivateAssets="all" />
-    <Compile Include="../ControlBatyr.Connections/Connection.cs" Link="Connection.cs" />
     <ProjectReference Include="../ControlBatyr/ControlBatyr.csproj" />
     <ProjectReference Include="../ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />
     <None Include="build/ControlBatyr.Inspection.targets" Pack="true" PackagePath="build/" />
     <None Include="build/ControlBatyr.Inspection.props" Pack="true" PackagePath="build/" />
     <InternalsVisibleTo Include="ControlBatyr.Tests" />
     <InternalsVisibleTo Include="ControlBatyr.Rules" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.0" />
   </ItemGroup>
   <Target Name="PackInspectionTool">
     <ItemGroup>
