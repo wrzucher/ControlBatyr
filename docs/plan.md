@@ -107,6 +107,11 @@ Each step is a separate pull request.
 - **The core is the model; readers are extensions.** [D] The library core is the vocabulary and the pipeline.
   The manager pattern is the first reader, a workflow engine could be the second. They stay in one package
   until a second reader really appears; in code they are already separate.
+- **Actor: maybe the missing term.** [P] Who an operation is for (owner, administrator, an agent). Not a node
+  like a domain, but a mark on an operation — close to security scopes in OpenAPI. It would let the documents be
+  sliced "what this actor can do". Against: one API often has several consumers, and splitting a manager by
+  consumer (`GameManager` / `GameAdminManager`) breaks "a manager is the API of a domain". Wait for a real product
+  to need it.
 - **Outputs are settings.** Markdown, the model file and diagrams are a list of outputs a product turns on and
   points to a folder.
 
