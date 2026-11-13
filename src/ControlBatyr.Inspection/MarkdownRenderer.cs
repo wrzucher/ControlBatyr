@@ -39,9 +39,24 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
                     }
                 }
             }
+            foreach (var item in domain.RecordEvents)
+            {
+                Add(item.Node, file, TypeAnchor(item.Node.Id));
+                foreach (var payload in item.Payloads)
+                {
+                    Discover(payload, file);
+                }
+            }
             foreach (var operation in domain.Operations)
             {
                 DiscoverOperation(operation, file);
+            }
+        }
+        foreach (var domain in model.Domains)
+        {
+            foreach (var item in domain.RecordEvents)
+            {
+                owners[item.Node.Id] = [result[domain.Node.Id].File];
             }
         }
         foreach (var item in model.Models)
@@ -51,7 +66,7 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
             Add(item.Node, file, anchor);
             foreach (var node in item.Properties.Select(property => property.Node).Concat(item.Values.Select(value => value.Node)))
             {
-                Add(node, file, anchor);
+                Add(node, file, RecordEvent(item.Node.Id, model) ? anchor + "-payload" : anchor);
             }
             Operations(item.Methods, file);
         }
@@ -151,7 +166,7 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
             Text(domain.Node.Summary);
             Text($"[Business API](index.md) · [Reference]({File(domain.Node)})");
             Overview("Operations", domain.Operations.Select(operation => operation.Node));
-            Overview("Events", domain.Publishers.SelectMany(publisher => publisher.Events).Select(item => item.Node));
+            Overview("Events", Events(domain).Select(item => item.Node));
             Overview("Connections", connections.Select(connection => connection.Node with { Name = ActionName(connection.Node) }));
             Overview("Models", model.Models.Where(item => File(item.Node) == File(domain.Node)).Select(item => item.Node));
             documents.Add(Finish());
@@ -161,7 +176,7 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
             Text("## Operations");
             Heading(domain.Node);
             Methods(domain.Operations);
-            if (domain.Publishers.Length > 0)
+            if (domain.Publishers.Length > 0 || domain.RecordEvents.Length > 0)
             {
                 Text("## Events");
                 foreach (var publisher in domain.Publishers)
@@ -169,21 +184,12 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
                     Heading(publisher.Node);
                     foreach (var item in publisher.Events)
                     {
-                        MemberHeading(item.Node);
-                        if (item.Payloads.Length > 0)
-                        {
-                            Text($"**Payload:** {string.Join(", ", item.Payloads.Select(TypeName))}");
-                        }
-                        Remarks(item.Node);
-                        var raisers = model.Domains.SelectMany(domain => domain.Operations)
-                            .Concat(model.Models.SelectMany(model => model.Methods))
-                            .Where(operation => operation.Raises.Contains(item.Node.Id));
-                        var links = raisers.Select(operation => Link(operation.Node.Name, operation.Node.Id)).ToArray();
-                        if (links.Length > 0)
-                        {
-                            Text($"**Raised by:** {string.Join(", ", links)}");
-                        }
+                        Event(item, false);
                     }
+                }
+                foreach (var item in domain.RecordEvents)
+                {
+                    Event(item, true);
                 }
             }
             Models(currentFile);
@@ -198,6 +204,33 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
             documents.Add(Finish());
         }
         return documents;
+    }
+
+    private static IEnumerable<BusinessEvent> Events(BusinessDomain domain) =>
+        domain.Publishers.SelectMany(publisher => publisher.Events).Concat(domain.RecordEvents);
+
+    private static bool RecordEvent(string id, BusinessApiModel model) =>
+        model.Domains.Any(domain => domain.RecordEvents.Any(item => item.Node.Id == id));
+
+    private void Event(BusinessEvent item, bool record)
+    {
+        MemberHeading(item.Node);
+        if (item.Payloads.Length > 0)
+        {
+            var payloads = record
+                ? $"[{item.Node.Name}](#{TypeAnchor(item.Node.Id)}-payload)"
+                : string.Join(", ", item.Payloads.Select(TypeName));
+            Text($"**Payload:** {payloads}");
+        }
+        Remarks(item.Node);
+        var raisers = model.Domains.SelectMany(domain => domain.Operations)
+            .Concat(model.Models.SelectMany(model => model.Methods))
+            .Where(operation => operation.Raises.Contains(item.Node.Id));
+        var links = raisers.Select(operation => Link(operation.Node.Name, operation.Node.Id)).ToArray();
+        if (links.Length > 0)
+        {
+            Text($"**Raised by:** {string.Join(", ", links)}");
+        }
     }
 
     private static string OverviewFile(BusinessDomain domain) => domain.Name.ToLowerInvariant() + ".md";
@@ -287,7 +320,16 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         Text("## Models");
         foreach (var item in items)
         {
-            Heading(item.Node);
+            if (RecordEvent(item.Node.Id, model))
+            {
+                Text($"<a id=\"{TypeAnchor(item.Node.Id)}-payload\"></a>");
+                Text($"### {item.Node.Name}");
+                Text(SourceLink(item.Node));
+            }
+            else
+            {
+                Heading(item.Node);
+            }
             if (item.IsEnum)
             {
                 Enum(item.Values);
@@ -379,7 +421,7 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
             Remarks(method.Node);
             if (method.Raises.Length > 0)
             {
-                var events = model.Domains.SelectMany(domain => domain.Publishers).SelectMany(publisher => publisher.Events)
+                var events = model.Domains.SelectMany(Events)
                     .ToDictionary(item => item.Node.Id, item => item.Node.Name);
                 Text($"**Raises:** {string.Join(", ", method.Raises.Select(id => Link(events[id], id)))}");
             }

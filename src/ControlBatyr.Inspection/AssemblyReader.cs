@@ -17,7 +17,7 @@ internal sealed class AssemblyReader
     private readonly HashSet<Type> suppliedPublishers;
     private readonly (Type Manager, string Operation, MethodInfo Test)[] requirements;
 
-    private sealed record Domain(Type Manager, Type[] Publishers, HashSet<Type> Models)
+    private sealed record Domain(Type Manager, Type[] Publishers, Type[] RecordEvents, HashSet<Type> Models)
     {
         internal string Name => Manager.Name.EndsWith("Manager", StringComparison.Ordinal) ? Manager.Name[..^7] : Manager.Name;
     }
@@ -41,7 +41,16 @@ internal sealed class AssemblyReader
             {
                 Discover(parameter.ParameterType);
             }
-            return new Domain(manager, publishers, [.. models]);
+            var recordEvents = types.Where(type => EventManagers(type).Contains(manager)).ToArray();
+            foreach (var item in recordEvents)
+            {
+                if (EventManagers(item).Count() != 1)
+                {
+                    throw new InvalidOperationException($"Event {item.FullName} must have exactly one [Event<TManager>] domain in the supplied assemblies.");
+                }
+                Discover(item);
+            }
+            return new Domain(manager, publishers, recordEvents, [.. models]);
         }).ToArray();
         models.Clear();
         models.UnionWith(domains.SelectMany(domain => domain.Models));
@@ -71,7 +80,8 @@ internal sealed class AssemblyReader
     {
         var publishers = domain.Publishers.Select(publisher => new BusinessPublisher(Node(publisher),
             [.. EventsOf(publisher).Select(item => new BusinessEvent(Node(item), Payloads(item)))]));
-        return new(domain.Name, Node(domain.Manager), Operations(domain.Manager), [.. publishers]);
+        return new(domain.Name, Node(domain.Manager), Operations(domain.Manager), [.. publishers],
+            [.. domain.RecordEvents.Select(type => new BusinessEvent(Node(type), [Reference(type)]))]);
     }
 
     private BusinessNode Node(MemberInfo member)
@@ -145,7 +155,24 @@ internal sealed class AssemblyReader
             .Select(attribute =>
             {
                 var publisher = attribute.AttributeType.GetGenericArguments()[0];
-                var name = (string)attribute.ConstructorArguments[0].Value!;
+                var recordManagers = EventManagers(publisher).ToArray();
+                if (attribute.ConstructorArguments.Count == 0)
+                {
+                    if (recordManagers.Length != 1 || domains.Count(domain => domain.RecordEvents.Contains(publisher)) != 1)
+                    {
+                        throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises {publisher.Name}, which must be an [Event<TManager>] type of exactly one domain in the supplied assemblies; an [EventPublisher] requires an event name.");
+                    }
+                    return Id(publisher);
+                }
+                if (recordManagers.Length > 0)
+                {
+                    throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises record event {publisher.Name}, which must be used without an event name.");
+                }
+                var name = (string?)attribute.ConstructorArguments[0].Value;
+                if (name is null)
+                {
+                    throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises {publisher.Name}, which requires an event name.");
+                }
                 var item = publisher.GetEvent(name);
                 if (!suppliedPublishers.Contains(publisher) || item?.AddMethod?.IsStatic != false
                     || domains.Count(domain => domain.Publishers.Contains(publisher)) != 1)
@@ -155,6 +182,11 @@ internal sealed class AssemblyReader
                 return Id(item);
             }).Distinct()];
     }
+
+    private static IEnumerable<Type> EventManagers(Type type) => type.CustomAttributes
+        .Where(attribute => attribute.AttributeType.IsGenericType
+            && attribute.AttributeType.GetGenericTypeDefinition() == typeof(EventAttribute<>))
+        .Select(attribute => attribute.AttributeType.GetGenericArguments()[0]);
 
     private static EventInfo[] EventsOf(Type type)
     {

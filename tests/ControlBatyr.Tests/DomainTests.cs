@@ -104,6 +104,76 @@ public sealed class DomainTests
     }
 
     [Fact]
+    public void Record_events_have_type_identity_payload_and_links_even_without_a_raising_operation()
+    {
+        var model = BusinessApiReader.Read(null, typeof(DomainTests).Assembly);
+        var domain = model.Domains.Single(domain => domain.Name == "RecordSource");
+        var item = domain.RecordEvents.Single(item => item.Node.Name == "ReadingAccepted");
+        Assert.Equal("A:ControlBatyr.Tests|T:ControlBatyr.Tests.ReadingAccepted", item.Node.Id);
+        Assert.Equal("A reading was accepted.", item.Node.Summary);
+        Assert.Equal(item.Node.Id, Assert.Single(item.Payloads).ModelId);
+        Assert.Contains(model.Models.Single(model => model.Node.Id == item.Node.Id).Properties,
+            property => property.Node.Name == "Value" && property.Type.Name == "decimal");
+        var operation = Assert.Single(domain.Operations);
+        Assert.Equal(item.Node.Id, Assert.Single(operation.Raises));
+        var background = domain.RecordEvents.Single(item => item.Node.Name == "ReadingExpired");
+        Assert.DoesNotContain(model.Domains.SelectMany(domain => domain.Operations),
+            operation => operation.Raises.Contains(background.Node.Id));
+
+        var documents = BusinessApiMarkdown.Render(model).ToDictionary(item => item.RelativePath, item => item.Markdown);
+        var reference = documents["recordsource.reference.md"];
+        Assert.Contains("- [ReadingAccepted](recordsource.reference.md#type-controlbatyr-tests-readingaccepted) — A reading was accepted.", documents["recordsource.md"]);
+        Assert.Contains("**Raises:** [ReadingAccepted](#type-controlbatyr-tests-readingaccepted)", reference);
+        Assert.Contains("**Raised by:** [Accept](#type-controlbatyr-tests-recordsourcemanager-accept), [Forward](recordreader.reference.md#type-controlbatyr-tests-recordreadermanager-forward)", reference);
+        Assert.Contains("**Raises:** [ReadingAccepted](recordsource.reference.md#type-controlbatyr-tests-readingaccepted)", documents["recordreader.reference.md"]);
+        Assert.Contains("**Payload:** [ReadingAccepted](#type-controlbatyr-tests-readingaccepted-payload)", reference);
+        Assert.Contains("<a id=\"type-controlbatyr-tests-readingaccepted-payload\"></a>", reference);
+        Assert.Contains("| Value | decimal |", reference);
+        Assert.Contains("#### ReadingExpired", reference);
+        Assert.Contains("**Payload:** [ReadingExpired](#type-controlbatyr-tests-readingexpired-payload)", reference);
+        Assert.DoesNotContain(model.Connections, connection => connection.EventId == item.Node.Id);
+    }
+
+    [Theory]
+    [InlineData(typeof(OriginPublisher), false, "requires an event name")]
+    [InlineData(typeof(UnmarkedManager), false, "exactly one domain in the supplied assemblies")]
+    [InlineData(typeof(ReadingAccepted), true, "without an event name")]
+    [InlineData(typeof(UnownedRecordEvent), false, "exactly one domain in the supplied assemblies")]
+    [InlineData(typeof(Game.Core.BetRefunded), false, "exactly one domain in the supplied assemblies")]
+    public void Invalid_record_event_raises_explains_the_required_declaration(Type target, bool named, string message)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("InvalidRecordRaisesCore"), AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Core").DefineType("InvalidRecordRaisesManager", TypeAttributes.Public);
+        type.SetCustomAttribute(new CustomAttributeBuilder(typeof(ManagerAttribute).GetConstructor(Type.EmptyTypes)!, []));
+        var method = type.DefineMethod("Run", MethodAttributes.Public, typeof(void), Type.EmptyTypes);
+        method.SetCustomAttribute(new CustomAttributeBuilder(typeof(RaisesAttribute<>).MakeGenericType(target)
+            .GetConstructor(named ? [typeof(string)] : Type.EmptyTypes)!, named ? ["Named"] : []));
+        method.GetILGenerator().Emit(OpCodes.Ret);
+        type.CreateType();
+
+        var failure = Assert.Throws<InvalidOperationException>(() => BusinessApiReader.Read(null, assembly, typeof(DomainTests).Assembly));
+        Assert.Contains("InvalidRecordRaisesManager.Run", failure.Message);
+        Assert.Contains(target.Name, failure.Message);
+        Assert.Contains(message, failure.Message);
+    }
+
+    [Fact]
+    public void An_event_declared_for_multiple_domains_is_rejected()
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("AmbiguousRecordCore"), AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Core").DefineType("AmbiguousRecord", TypeAttributes.Public);
+        foreach (var manager in new[] { typeof(RecordSourceManager), typeof(RecordReaderManager) })
+        {
+            type.SetCustomAttribute(new CustomAttributeBuilder(typeof(EventAttribute<>).MakeGenericType(manager)
+                .GetConstructor(Type.EmptyTypes)!, []));
+        }
+        type.CreateType();
+        var failure = Assert.Throws<InvalidOperationException>(() => BusinessApiReader.Read(null, assembly, typeof(DomainTests).Assembly));
+        Assert.Contains("AmbiguousRecord", failure.Message);
+        Assert.Contains("exactly one [Event<TManager>] domain", failure.Message);
+    }
+
+    [Fact]
     public async Task Wiring_awaits_actions_in_fresh_scopes_and_disposes_each_target()
     {
         var (services, recorder, _) = Services();
@@ -324,3 +394,30 @@ internal sealed class RecordingLogger : ILoggerFactory, ILogger
         }
     }
 }
+
+[Manager]
+public sealed class RecordSourceManager
+{
+    [Raises<ReadingAccepted>]
+    public void Accept() { }
+}
+
+[Manager]
+public sealed class RecordReaderManager
+{
+    [Raises<ReadingAccepted>]
+    public void Forward() { }
+}
+
+/// <summary>A reading was accepted.</summary>
+[Event<RecordSourceManager>]
+public sealed record ReadingAccepted(decimal Value);
+
+[Event<RecordSourceManager>]
+public sealed class ReadingExpired
+{
+    public Guid ReadingId { get; init; }
+}
+
+[Event<UnmarkedManager>]
+public sealed record UnownedRecordEvent;

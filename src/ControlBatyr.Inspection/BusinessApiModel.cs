@@ -8,7 +8,7 @@ public sealed record BusinessApiModel(ImmutableArray<BusinessDomain> Domains, Im
 public sealed record BusinessNode(string Id, string Name, string Summary, string Remarks, string? SourceFile);
 
 public sealed record BusinessDomain(string Name, BusinessNode Node, ImmutableArray<BusinessOperation> Operations,
-    ImmutableArray<BusinessPublisher> Publishers);
+    ImmutableArray<BusinessPublisher> Publishers, ImmutableArray<BusinessEvent> RecordEvents);
 
 public sealed record BusinessPublisher(BusinessNode Node, ImmutableArray<BusinessEvent> Events);
 

@@ -55,11 +55,39 @@ Returns the bet amount to the player after cancellation.
 | betId | Guid |
 | amount | decimal |
 
+**Raises:** [BetRefunded](#type-game-core-betrefunded)
+
 **Requirements**
 
 - Cancelling a bet refunds its bet amount to its players account — [Source](../../Game.Tests/AccountRequirements.cs)
 
+## Events
+
+<a id="type-game-core-betrefunded"></a>
+
+#### BetRefunded
+
+A cancelled bet amount was returned to the player.
+
+**Payload:** [BetRefunded](#type-game-core-betrefunded-payload)
+
+**Raised by:** [RefundBet](#type-game-core-accountmanager-refundbetasync)
+
 ## Models
+
+<a id="type-game-core-betrefunded-payload"></a>
+
+### BetRefunded
+
+[Source](../../Game.Core/BetRefunded.cs)
+
+#### Data
+
+| Name | Type |
+| --- | --- |
+| PlayerId | Guid |
+| BetId | Guid |
+| Amount | decimal |
 
 <a id="type-game-model-account"></a>
 

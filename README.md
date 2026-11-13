@@ -70,7 +70,14 @@ Mark test methods with `[Requirement<GameManager>(nameof(GameManager.CancelBetAs
 appears under the operation with a source link. Unmarked tests are omitted.
 
 Declare which events an operation raises with `[Raises<GameEventPublisher>(nameof(GameEventPublisher.BetCancelled))]`;
-the model and reference pages link operations and events both ways. For `[On<TPublisher>]` connections, add this reference to the startup project:
+the model and reference pages link operations and events both ways.
+
+A class or record marked `[Event<AccountManager>]` declares an event of that manager's domain.
+Use `[Raises<BetRefunded>]` without an event name on an operation that announces it. Its public
+properties form the documented payload, and it appears even when no operation raises it.
+`[On<TPublisher>]` connections support publisher events only.
+
+For `[On<TPublisher>]` connections, add this reference to the startup project:
 
 ```xml
 <PackageReference Include="ControlBatyr.Connections" Version="0.1.0-preview.2" />

@@ -50,7 +50,7 @@ code, with the code as the single source of truth**. [D]
 | Part | Package | State |
 |---|---|---|
 | Role attributes: manager, object model, event publisher, persistence | `ControlBatyr` | done |
-| Operation events `[Raises<T>]`; domain connections `[On<T>]`; startup wiring | `ControlBatyr`; `ControlBatyr.Connections` | done |
+| Publisher and record events `[Event<TManager>]`, `[Raises<T>]`; domain connections `[On<T>]`; startup wiring | `ControlBatyr`; `ControlBatyr.Connections` | done |
 | Business API model with identifiers, written as `business-api.json` | `ControlBatyr.Inspection` | done |
 | Business API documents regenerated at build, one file per domain, OpenAPI-like | `ControlBatyr.Inspection` | done |
 | Requirements from tests `[Requirement<T>]` | `ControlBatyr.Requirements` | done |
