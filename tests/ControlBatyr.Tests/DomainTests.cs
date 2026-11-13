@@ -134,6 +134,25 @@ public sealed class DomainTests
         Assert.DoesNotContain(model.Connections, connection => connection.EventId == item.Node.Id);
     }
 
+    [Fact]
+    public void Overview_lists_record_events_only_under_events_and_reference_keeps_payloads()
+    {
+        var documents = Documents();
+        var overview = documents["recordsource.md"];
+        var events = overview.Split("## Events\n")[1].Split("## Models\n")[0];
+        var models = overview.Contains("## Models\n", StringComparison.Ordinal)
+            ? overview.Split("## Models\n")[1] : "";
+
+        foreach (var name in new[] { "ReadingAccepted", "ReadingExpired" })
+        {
+            Assert.Contains("- [" + name + "]", events);
+            Assert.DoesNotContain("- [" + name + "]", models);
+            Assert.Equal(1, overview.Split("- [" + name + "]", StringSplitOptions.None).Length - 1);
+            Assert.Contains("**Payload:** [" + name + "]", documents["recordsource.reference.md"]);
+        }
+        Assert.Contains("| Value | decimal |", documents["recordsource.reference.md"]);
+    }
+
     [Theory]
     [InlineData(typeof(OriginPublisher), false, "requires an event name")]
     [InlineData(typeof(UnmarkedManager), false, "exactly one domain in the supplied assemblies")]

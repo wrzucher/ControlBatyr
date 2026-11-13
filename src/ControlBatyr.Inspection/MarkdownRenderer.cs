@@ -168,7 +168,8 @@ internal sealed class MarkdownRenderer(BusinessApiModel model, bool diagrams = f
             Overview("Operations", domain.Operations.Select(operation => operation.Node));
             Overview("Events", Events(domain).Select(item => item.Node));
             Overview("Connections", connections.Select(connection => connection.Node with { Name = ActionName(connection.Node) }));
-            Overview("Models", model.Models.Where(item => File(item.Node) == File(domain.Node)).Select(item => item.Node));
+            Overview("Models", model.Models.Where(item => File(item.Node) == File(domain.Node)
+                && !domain.RecordEvents.Any(record => record.Node.Id == item.Node.Id)).Select(item => item.Node));
             if (diagrams)
             {
                 Text("## Diagram");
