@@ -33,6 +33,7 @@ foreach ($id in 'ControlBatyr', 'ControlBatyr.Connections', 'ControlBatyr.Requir
         }
         if ($id -eq 'ControlBatyr.Inspection' -and
             ($metadata.developmentDependency -ne 'true' -or
+             $metadata.frameworkReferences -or
              !$archive.GetEntry('build/ControlBatyr.Inspection.targets') -or
              !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Inspection.dll') -or
              !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Inspection.runtimeconfig.json') -or

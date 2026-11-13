@@ -10,6 +10,7 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackInspectionTool</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" PrivateAssets="all" />
     <Compile Include="../ControlBatyr.Connections/Connection.cs" Link="Connection.cs" />
     <ProjectReference Include="../ControlBatyr/ControlBatyr.csproj" />
     <ProjectReference Include="../ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />
