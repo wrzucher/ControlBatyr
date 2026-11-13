@@ -89,6 +89,12 @@ if ($model.Domains[0].Node.Id -ne 'A:Consumer|T:PackageSmoke.TicketManager') {
     throw 'The internal manager must appear in the model.'
 }
 $markdown = Get-Content $document -Raw
+$reference = Join-Path $consumer 'docs/business-api/ticket.reference.md'
+if (!(Test-Path $reference) -or !$markdown.Contains('[Issue](ticket.reference.md#') -or
+    $markdown.Contains('**Parameters**') -or $markdown.Contains('**Returns:')) {
+    throw 'The overview must link to a separate reference without contract details.'
+}
+$markdown = Get-Content $reference -Raw
 foreach ($text in 'Issues a ticket with the requested identifier.', 'TicketManager', 'Issue', 'Issued ticket keeps its identifier', '[Source]') {
     if (!$markdown.Contains($text)) { throw "Generated document is missing: $text" }
 }
@@ -148,7 +154,7 @@ public static class UnattachedRequirements
 }
 '@
 Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version"
-if ((Get-Content $document -Raw).Contains('Missing operation is ignored')) {
+if ((Get-Content $reference -Raw).Contains('Missing operation is ignored')) {
     throw 'A requirement targeting a missing operation must not appear in documents.'
 }
 Write-Output 'PASS: without Rules, a mutable model and an invalid requirement target build successfully.'

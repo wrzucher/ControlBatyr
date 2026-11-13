@@ -17,12 +17,12 @@ public sealed class DomainTests
     public void Constructor_publishers_belong_to_their_manager_and_unexposed_models_stay_hidden()
     {
         var documents = Documents();
-        Assert.Contains("#### Recorded", documents["origin.md"]);
-        Assert.DoesNotContain("#### Recorded", documents["sink.md"]);
+        Assert.Contains("#### Recorded", documents["origin.reference.md"]);
+        Assert.DoesNotContain("#### Recorded", documents["sink.reference.md"]);
         Assert.DoesNotContain("### UnexposedModel", string.Concat(documents.Values));
         Assert.DoesNotContain("### UnownedPublisher", string.Concat(documents.Values));
-        Assert.Contains("### OriginOnly", documents["origin.md"]);
-        Assert.DoesNotContain("### OriginOnly", documents["sink.md"]);
+        Assert.Contains("### OriginOnly", documents["origin.reference.md"]);
+        Assert.DoesNotContain("### OriginOnly", documents["sink.reference.md"]);
     }
 
     [Fact]
@@ -31,8 +31,8 @@ public sealed class DomainTests
         var documents = Documents();
         Assert.Contains("### SharedReading\n", documents["shared.md"]);
         Assert.Contains("### SharedDetails\n", documents["shared.md"]);
-        Assert.Contains("[SharedReading](shared.md#type-controlbatyr-tests-sharedreading)", documents["origin.md"]);
-        Assert.Contains("[SharedReading](shared.md#type-controlbatyr-tests-sharedreading)", documents["sink.md"]);
+        Assert.Contains("[SharedReading](shared.md#type-controlbatyr-tests-sharedreading)", documents["origin.reference.md"]);
+        Assert.Contains("[SharedReading](shared.md#type-controlbatyr-tests-sharedreading)", documents["sink.reference.md"]);
         foreach (var model in new[] { "SharedReading", "SharedDetails" })
         {
             Assert.Equal(1, string.Concat(documents.Values).Split($"### {model}\n", StringSplitOptions.None).Length - 1);
@@ -44,17 +44,17 @@ public sealed class DomainTests
     {
         var documents = Documents();
         Assert.Contains("[Origin](origin.md) — Provides readings.", documents["index.md"]);
-        foreach (var file in new[] { "index.md", "origin.md", "sink.md" })
+        foreach (var file in new[] { "index.md", "origin.reference.md", "sink.reference.md" })
         {
             var markdown = documents[file];
             Assert.Contains("Origin.Recorded]", markdown);
             Assert.Contains(" → [Sink](sink.md): ReceiveReading — ", markdown);
             Assert.Contains("Record the reading in the receiving domain.", markdown);
         }
-        Assert.Contains("origin.md#type-controlbatyr-tests-originpublisher-recorded", documents["index.md"]);
-        Assert.DoesNotContain("sink.md#type-controlbatyr-tests-sinkmanager-handleasync", documents["origin.md"]);
-        Assert.Contains("<a id=\"type-controlbatyr-tests-sinkmanager-handleasync\"></a>", documents["sink.md"]);
-        Assert.DoesNotContain("## Connections", documents["gateway.md"]);
+        Assert.Contains("origin.reference.md#type-controlbatyr-tests-originpublisher-recorded", documents["index.md"]);
+        Assert.DoesNotContain("sink.reference.md#type-controlbatyr-tests-sinkmanager-handleasync", documents["origin.reference.md"]);
+        Assert.Contains("<a id=\"type-controlbatyr-tests-sinkmanager-handleasync\"></a>", documents["sink.reference.md"]);
+        Assert.DoesNotContain("## Connections", documents["gateway.reference.md"]);
     }
 
     [Fact]

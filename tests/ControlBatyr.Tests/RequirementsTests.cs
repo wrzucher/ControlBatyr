@@ -15,7 +15,7 @@ public sealed class RequirementsTests
     [Requirement<Gateway>(nameof(Gateway.FindAsync))]
     public void requirements_keep_their_initial_case_and_link_only_to_the_selected_operation()
     {
-        var markdown = Documents()["gateway.md"];
+        var markdown = Documents()["gateway.reference.md"];
         var find = markdown[markdown.IndexOf("#### Find\n", StringComparison.Ordinal)..markdown.IndexOf("#### Save\n", StringComparison.Ordinal)];
         Assert.Contains("- requirements keep their initial case and link only to the selected operation — [Source](../RequirementsTests.cs)", find);
         Assert.DoesNotContain("- requirements keep", markdown[markdown.IndexOf("#### Save\n", StringComparison.Ordinal)..]);
@@ -27,7 +27,7 @@ public sealed class RequirementsTests
     [Requirement<Gateway>(nameof(Gateway.SaveAsync))]
     public void A_summary_overrides_the_method_name()
     {
-        var markdown = Documents()["gateway.md"];
+        var markdown = Documents()["gateway.reference.md"];
         Assert.Contains("- Summaries replace test names. — [Source](../RequirementsTests.cs)", markdown);
         Assert.DoesNotContain("- A summary overrides", markdown);
         Assert.Equal(2, markdown.Split("- Summaries replace test names.", StringSplitOptions.None).Length - 1);
@@ -38,7 +38,7 @@ public sealed class RequirementsTests
     [Requirement<Gateway>(nameof(Gateway.SaveAsync))]
     public void Duplicate_text_keeps_both_tests_under_the_operation()
     {
-        var markdown = Documents()["gateway.md"];
+        var markdown = Documents()["gateway.reference.md"];
         var save = markdown[markdown.IndexOf("#### Save\n", StringComparison.Ordinal)..markdown.IndexOf("#### All\n", StringComparison.Ordinal)];
         Assert.Equal(2, save.Split("- Summaries replace test names.", StringSplitOptions.None).Length - 1);
         Assert.DoesNotContain("- Summaries replace test names.", markdown[..markdown.IndexOf("#### Save\n", StringComparison.Ordinal)]);
@@ -48,7 +48,7 @@ public sealed class RequirementsTests
     public void Unmarked_tests_are_omitted_and_uncovered_operations_remain_visible()
     {
         var documents = Documents();
-        var markdown = documents["gateway.md"];
+        var markdown = documents["gateway.reference.md"];
         var all = markdown[markdown.IndexOf("#### All\n", StringComparison.Ordinal)..markdown.IndexOf("#### Echo\n", StringComparison.Ordinal)];
         Assert.DoesNotContain("**Requirements**", all);
         Assert.DoesNotContain("No requirements", markdown);

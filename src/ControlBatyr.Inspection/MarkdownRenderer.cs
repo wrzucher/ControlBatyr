@@ -19,8 +19,9 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         var files = new HashSet<string>(StringComparer.Ordinal) { "index.md", "shared.md" };
         foreach (var domain in model.Domains)
         {
-            var file = domain.Name.ToLowerInvariant() + ".md";
-            if (!files.Add(file))
+            var overview = OverviewFile(domain);
+            var file = domain.Name.ToLowerInvariant() + ".reference.md";
+            if (!files.Add(overview) || !files.Add(file))
             {
                 throw new InvalidOperationException($"Domain document path is not unique: {file}.");
             }
@@ -57,7 +58,7 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         foreach (var connection in model.Connections)
         {
             var target = result[connection.TargetDomainId];
-            Add(connection.Node, target.File, target.Anchor);
+            Add(connection.Node, target.File, MemberAnchor(connection.Node.Id));
         }
         return result;
 
@@ -134,7 +135,7 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         Text("## Domains");
         foreach (var domain in model.Domains)
         {
-            Text($"- [{domain.Name}]({File(domain.Node)}) — {domain.Node.Summary}");
+            Summary($"[{domain.Name}]({OverviewFile(domain)})", domain.Node.Summary);
         }
         if (model.Models.Any(item => File(item.Node) == "shared.md"))
         {
@@ -144,8 +145,19 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         documents.Add(Finish());
         foreach (var domain in model.Domains)
         {
-            Start(File(domain.Node), domain.Name);
-            Text("[Business API](index.md)");
+            var connections = model.Connections.Where(connection => connection.TargetDomainId == domain.Node.Id
+                || domain.Publishers.Any(publisher => publisher.Events.Any(item => item.Node.Id == connection.EventId))).ToArray();
+            Start(OverviewFile(domain), domain.Name);
+            Text(domain.Node.Summary);
+            Text($"[Business API](index.md) · [Reference]({File(domain.Node)})");
+            Overview("Operations", domain.Operations.Select(operation => operation.Node));
+            Overview("Events", domain.Publishers.SelectMany(publisher => publisher.Events).Select(item => item.Node));
+            Overview("Connections", connections.Select(connection => connection.Node with { Name = ActionName(connection.Node) }));
+            Overview("Models", model.Models.Where(item => File(item.Node) == File(domain.Node)).Select(item => item.Node));
+            documents.Add(Finish());
+
+            Start(File(domain.Node), domain.Name + " reference");
+            Text($"[Business API](index.md) · [Overview]({OverviewFile(domain)})");
             Text("## Operations");
             Heading(domain.Node);
             Methods(domain.Operations);
@@ -167,8 +179,7 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
                 }
             }
             Models(currentFile);
-            Connections(model.Connections.Where(connection => connection.TargetDomainId == domain.Node.Id
-                || domain.Publishers.Any(publisher => publisher.Events.Any(item => item.Node.Id == connection.EventId))));
+            Connections(connections);
             documents.Add(Finish());
         }
         if (model.Models.Any(item => File(item.Node) == "shared.md"))
@@ -180,6 +191,30 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         }
         return documents;
     }
+
+    private static string OverviewFile(BusinessDomain domain) => domain.Name.ToLowerInvariant() + ".md";
+
+    private void Overview(string title, IEnumerable<BusinessNode> nodes)
+    {
+        var items = nodes.ToArray();
+        if (items.Length == 0)
+        {
+            return;
+        }
+        Text($"## {title}");
+        foreach (var node in items)
+        {
+            Summary(Link(node.Name, node.Id), node.Summary);
+        }
+    }
+
+    private void Summary(string name, string summary)
+    {
+        Text($"- {name}" + (summary.Length == 0 ? "" : $" — {summary}"));
+    }
+
+    private static string ActionName(BusinessNode node) => node.Name.EndsWith("Async", StringComparison.Ordinal)
+        ? node.Name[..^5] : node.Name;
 
     private string File(BusinessNode node)
     {
@@ -214,17 +249,23 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         Text("## Connections");
         foreach (var connection in items)
         {
+            if (File(connection.Node) == currentFile)
+            {
+                Anchor(connection.Node);
+            }
             var from = model.Domains.Single(domain => domain.Publishers.Any(publisher =>
                 publisher.Events.Any(item => item.Node.Id == connection.EventId)));
             var to = model.Domains.Single(domain => domain.Node.Id == connection.TargetDomainId);
             var item = from.Publishers.SelectMany(publisher => publisher.Events).Single(item => item.Node.Id == connection.EventId);
-            var action = connection.Node.Name;
-            if (action.EndsWith("Async", StringComparison.Ordinal))
-            {
-                action = action[..^5];
-            }
+            var action = ActionName(connection.Node);
             Text($"- {Link(from.Name + "." + item.Node.Name, connection.EventId)} → "
-                + $"[{to.Name}]({File(to.Node)}): {action} — {connection.Node.Summary}");
+                + $"[{to.Name}]({OverviewFile(to)}): {action}"
+                + (connection.Node.Summary.Length == 0 ? "" : $" — {connection.Node.Summary}"));
+            if (File(connection.Node) == currentFile)
+            {
+                Text(SourceLink(connection.Node));
+                Remarks(connection.Node);
+            }
         }
     }
 
