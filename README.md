@@ -69,7 +69,8 @@ Mark test methods with `[Requirement<GameManager>(nameof(GameManager.CancelBetAs
 `ControlBatyr.Requirements` module. The test summary, or its name with underscores replaced by spaces,
 appears under the operation with a source link. Unmarked tests are omitted.
 
-For `[On<TPublisher>]` connections, add this reference to the startup project:
+Declare which events an operation raises with `[Raises<GameEventPublisher>(nameof(GameEventPublisher.BetCancelled))]`;
+the model and reference pages link operations and events both ways. For `[On<TPublisher>]` connections, add this reference to the startup project:
 
 ```xml
 <PackageReference Include="ControlBatyr.Connections" Version="0.1.0-preview.2" />

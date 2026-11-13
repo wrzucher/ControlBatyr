@@ -45,7 +45,8 @@
             "suffix": ""
           },
           "returns": "",
-          "requirements": []
+          "requirements": [],
+          "raises": []
         },
         {
           "node": {
@@ -73,7 +74,8 @@
             "suffix": ""
           },
           "returns": "",
-          "requirements": []
+          "requirements": [],
+          "raises": []
         },
         {
           "node": {
@@ -128,7 +130,8 @@
                 "sourceFile": "../../Game.Tests/AccountRequirements.cs"
               }
             }
-          ]
+          ],
+          "raises": []
         }
       ],
       "publishers": []
@@ -178,7 +181,8 @@
             "suffix": ""
           },
           "returns": "The recorded game, including the identifier used to place bets.",
-          "requirements": []
+          "requirements": [],
+          "raises": []
         },
         {
           "node": {
@@ -243,6 +247,9 @@
                 "sourceFile": "../../Game.Tests/GameRequirements.cs"
               }
             }
+          ],
+          "raises": [
+            "A:Game.Core|E:Game.Core.GameEventPublisher.BetPlaced"
           ]
         },
         {
@@ -287,7 +294,8 @@
                 "sourceFile": "../../Game.Tests/GameRequirements.cs"
               }
             }
-          ]
+          ],
+          "raises": []
         },
         {
           "node": {
@@ -360,6 +368,9 @@
                 "sourceFile": "../../Game.Tests/GameRequirements.cs"
               }
             }
+          ],
+          "raises": [
+            "A:Game.Core|E:Game.Core.GameEventPublisher.BetCancelled"
           ]
         },
         {
@@ -388,7 +399,8 @@
             "suffix": "?"
           },
           "returns": "The current bet, or null when betId is unknown.",
-          "requirements": []
+          "requirements": [],
+          "raises": []
         }
       ],
       "publishers": [

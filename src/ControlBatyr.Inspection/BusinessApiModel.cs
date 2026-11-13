@@ -13,7 +13,8 @@ public sealed record BusinessDomain(string Name, BusinessNode Node, ImmutableArr
 public sealed record BusinessPublisher(BusinessNode Node, ImmutableArray<BusinessEvent> Events);
 
 public sealed record BusinessOperation(BusinessNode Node, ImmutableArray<BusinessParameter> Parameters,
-    TypeReference ReturnType, string Returns, ImmutableArray<BusinessRequirement> Requirements);
+    TypeReference ReturnType, string Returns, ImmutableArray<BusinessRequirement> Requirements,
+    ImmutableArray<string> Raises);
 
 public sealed record BusinessParameter(string Name, TypeReference Type, string Description);
 

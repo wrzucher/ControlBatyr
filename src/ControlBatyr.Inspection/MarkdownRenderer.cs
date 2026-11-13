@@ -175,6 +175,14 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
                             Text($"**Payload:** {string.Join(", ", item.Payloads.Select(TypeName))}");
                         }
                         Remarks(item.Node);
+                        var raisers = model.Domains.SelectMany(domain => domain.Operations)
+                            .Concat(model.Models.SelectMany(model => model.Methods))
+                            .Where(operation => operation.Raises.Contains(item.Node.Id));
+                        var links = raisers.Select(operation => Link(operation.Node.Name, operation.Node.Id)).ToArray();
+                        if (links.Length > 0)
+                        {
+                            Text($"**Raised by:** {string.Join(", ", links)}");
+                        }
                     }
                 }
             }
@@ -369,6 +377,12 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
                 Text(method.Returns);
             }
             Remarks(method.Node);
+            if (method.Raises.Length > 0)
+            {
+                var events = model.Domains.SelectMany(domain => domain.Publishers).SelectMany(publisher => publisher.Events)
+                    .ToDictionary(item => item.Node.Id, item => item.Node.Name);
+                Text($"**Raises:** {string.Join(", ", method.Raises.Select(id => Link(events[id], id)))}");
+            }
             if (method.Requirements.Length > 0)
             {
                 Text("**Requirements**");
