@@ -53,6 +53,7 @@ code, with the code as the single source of truth**. [D]
 | Publisher and record events `[Event<TManager>]`, `[Raises<T>]`; domain connections `[On<T>]`; startup wiring | `ControlBatyr`; `ControlBatyr.Connections` | done |
 | Business API model with identifiers, written as `business-api.json` | `ControlBatyr.Inspection` | done |
 | Business API documents regenerated at build, one file per domain, OpenAPI-like | `ControlBatyr.Inspection` | done |
+| Outputs are settings: `ControlBatyrOutputs` selects `markdown` and `model` in the documentation folder | `ControlBatyr.Inspection` | done |
 | Requirements from tests `[Requirement<T>]` | `ControlBatyr.Requirements` | done |
 | Shape rules CB0001–CB0007 | `ControlBatyr.Rules` | done, optional |
 | Packages and a package smoke test | — | published as previews on nuget.org by a version tag |
@@ -112,8 +113,6 @@ Each step is a separate pull request.
   sliced "what this actor can do". Against: one API often has several consumers, and splitting a manager by
   consumer (`GameManager` / `GameAdminManager`) breaks "a manager is the API of a domain". Wait for a real product
   to need it.
-- **Outputs are settings.** Markdown, the model file and diagrams are a list of outputs a product turns on and
-  points to a folder.
 
 ## Critique we keep in mind
 

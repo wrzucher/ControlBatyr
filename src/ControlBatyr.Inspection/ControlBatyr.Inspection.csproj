@@ -15,6 +15,7 @@
     <ProjectReference Include="../ControlBatyr/ControlBatyr.csproj" />
     <ProjectReference Include="../ControlBatyr.Requirements/ControlBatyr.Requirements.csproj" />
     <None Include="build/ControlBatyr.Inspection.targets" Pack="true" PackagePath="build/" />
+    <None Include="build/ControlBatyr.Inspection.props" Pack="true" PackagePath="build/" />
     <InternalsVisibleTo Include="ControlBatyr.Tests" />
     <InternalsVisibleTo Include="ControlBatyr.Rules" />
   </ItemGroup>

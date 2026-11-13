@@ -34,6 +34,7 @@ foreach ($id in 'ControlBatyr', 'ControlBatyr.Connections', 'ControlBatyr.Requir
         if ($id -eq 'ControlBatyr.Inspection' -and
             ($metadata.developmentDependency -ne 'true' -or
              $metadata.frameworkReferences -or
+             !$archive.GetEntry('build/ControlBatyr.Inspection.props') -or
              !$archive.GetEntry('build/ControlBatyr.Inspection.targets') -or
              !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Inspection.dll') -or
              !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Inspection.runtimeconfig.json') -or
@@ -122,6 +123,30 @@ if ((Test-Path (Join-Path $output 'ControlBatyr.Inspection.dll')) -or
     throw 'Inspection must not be a consumer runtime dependency.'
 }
 Invoke-Dotnet run --project (Join-Path $consumer 'Runner/Runner.csproj') "-p:ControlBatyrPackageVersion=$version" "-p:RestorePackagesPath=$cache"
+
+foreach ($selection in 'model', 'markdown') {
+    $selectedDirectory = Join-Path $consumer "$selection-docs"
+    Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:ControlBatyrOutputs=$selection" "-p:ControlBatyrDocumentationDirectory=$selectedDirectory"
+    $files = @(Get-ChildItem $selectedDirectory -File | Where-Object Name -NE '.controlbatyr-generated')
+    if (($selection -eq 'model' -and ($files.Count -ne 1 -or $files[0].Name -ne 'business-api.json')) -or
+        ($selection -eq 'markdown' -and ($files.Count -eq 0 -or @($files | Where-Object Extension -NE '.md').Count -ne 0))) {
+        throw "The packaged target did not select only $selection."
+    }
+}
+$unknown = & dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" '-p:ControlBatyrOutputs=unknown' 2>&1
+if ($LASTEXITCODE -eq 0 -or ($unknown -join "`n") -notmatch 'Unknown ControlBatyrOutputs.*unknown.*Known names: markdown, model') {
+    $unknown | Write-Output
+    throw 'The packaged target must reject unknown outputs and list known names.'
+}
+$emptyDirectory = Join-Path $consumer 'empty-docs'
+Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" '-p:ControlBatyrOutputs=' "-p:ControlBatyrDocumentationDirectory=$emptyDirectory"
+$projectText = Get-Content $project -Raw
+try {
+    Set-Content $project ($projectText.Replace('</Project>', '<PropertyGroup><ControlBatyrOutputs></ControlBatyrOutputs></PropertyGroup></Project>'))
+    Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" '-p:ControlBatyrCheckDocuments=true' "-p:ControlBatyrDocumentationDirectory=$emptyDirectory"
+} finally { Set-Content $project $projectText }
+if (Test-Path $emptyDirectory) { throw 'An empty outputs property must write and check nothing.' }
+Write-Output 'PASS: packaged outputs select model or Markdown, reject unknown names, and accept empty command-line and project settings.'
 
 Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:ControlBatyrCheckDocuments=true"
 Add-Content $document 'Stale document'

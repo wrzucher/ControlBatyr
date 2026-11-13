@@ -39,6 +39,9 @@ Documents go to `docs/business-api` next to the project; set `ControlBatyrDocume
 elsewhere, as above. Inspection runs during the test project's
 build and adds no runtime dependency. Reference Inspection directly in each project that generates documents.
 
+`ControlBatyrOutputs` is a case-insensitive `;`-separated list: `markdown;model` by default; empty writes and checks nothing.
+Known names are `markdown` and `model`; disabled outputs are kept, and removing their files is the product's choice.
+
 This setup generates documentation only. Missing comments and pattern violations do not fail inspection;
 a requirement pointing to no documented operation is simply omitted. Assembly loading and other errors
 that prevent document generation still fail the build.

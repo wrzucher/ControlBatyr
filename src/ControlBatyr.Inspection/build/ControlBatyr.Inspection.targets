@@ -24,6 +24,6 @@
     <WriteLinesToFile File="$(IntermediateOutputPath)controlbatyr-references.txt"
                       Lines="@(_ControlBatyrReference->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
-          Command="dotnet &quot;$(ControlBatyrToolPath)&quot; &quot;$(ControlBatyrDocumentationDirectory)&quot; &quot;$(IntermediateOutputPath)controlbatyr-assemblies.txt&quot; &quot;$(IntermediateOutputPath)controlbatyr-references.txt&quot; &quot;$(ControlBatyrRulesPath)&quot; &quot;$(ControlBatyrCheckDocuments)&quot;" />
+          Command="dotnet &quot;$(ControlBatyrToolPath)&quot; &quot;$(ControlBatyrDocumentationDirectory)&quot; &quot;$(IntermediateOutputPath)controlbatyr-assemblies.txt&quot; &quot;$(IntermediateOutputPath)controlbatyr-references.txt&quot; &quot;$(ControlBatyrRulesPath)&quot; &quot;$(ControlBatyrCheckDocuments)&quot; &quot;$(ControlBatyrOutputs)&quot;" />
   </Target>
 </Project>
