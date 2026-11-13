@@ -136,6 +136,10 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
         {
             Text($"- [{domain.Name}]({File(domain.Node)}) — {domain.Node.Summary}");
         }
+        if (model.Models.Any(item => File(item.Node) == "shared.md"))
+        {
+            Text("[Shared models](shared.md)");
+        }
         Connections(model.Connections);
         documents.Add(Finish());
         foreach (var domain in model.Domains)
@@ -356,6 +360,10 @@ internal sealed class MarkdownRenderer(BusinessApiModel model)
 
     private string TypeName(TypeReference type)
     {
+        if (type.Name == "(")
+        {
+            return "(" + string.Join(", ", type.Arguments.Select(TypeName)) + ")" + type.Suffix;
+        }
         if (type.Name.Length == 0)
         {
             return TypeName(type.Arguments.Single()) + type.Suffix;
