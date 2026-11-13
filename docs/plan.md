@@ -21,6 +21,10 @@ code, with the code as the single source of truth**. [D]
 1. **Read the code once, get a typed description, and let anyone work with it.** Between the code and the
    documents there is a **business API model**: domains, operations, events, models, connections, requirements.
    Markdown, diagrams, rules and AI enrichment are consumers of the model. [D]
+   **The model is the product.** Its vocabulary — domain, operation, event, model, connection, requirement —
+   describes how the business works. Attributes are only one way to fill it, and documents are only one way to
+   use it. The roles of the pattern (manager, event publisher, persistence) belong to the reader, not to the
+   model. [D]
 2. **Traversal with extension points.** The library walks the model and gives extensions the nodes; what an
    extension does with them — one AI call, a supervised workflow, nothing — is not the library's concern. [D]
 3. **One identifier for everything.** Every node has a stable identifier (the xmldoc member ID). The same
@@ -41,11 +45,12 @@ code, with the code as the single source of truth**. [D]
 | Part | Package | State |
 |---|---|---|
 | Role attributes: manager, object model, event publisher, persistence | `ControlBatyr` | done |
-| Domain connections `[On<T>]` and their startup wiring | `ControlBatyr` | done; wiring moves to an extension (step 1) |
+| Domain connections `[On<T>]`; startup wiring | `ControlBatyr`; `ControlBatyr.Connections` | done |
+| Business API model with identifiers, written as `business-api.json` | `ControlBatyr.Inspection` | done |
 | Business API documents regenerated at build, one file per domain, OpenAPI-like | `ControlBatyr.Inspection` | done |
 | Requirements from tests `[Requirement<T>]` | `ControlBatyr.Requirements` | done |
 | Shape rules CB0001–CB0007 | `ControlBatyr.Rules` | done, optional |
-| Packages and a package smoke test | — | built, not published |
+| Packages and a package smoke test | — | published as previews on nuget.org by a version tag |
 
 Product settings: `ControlBatyrDocumentationDirectory` (where the documents go), `ControlBatyrCheckDocuments`
 (fail when committed documents are stale, off by default).
@@ -56,8 +61,8 @@ Each step is a separate pull request.
 
 | No. | What we do | Done when |
 |---|---|---|
-| 1 | **The model.** Reading, model and rendering are separated; nodes carry identifiers; the model is also written as a file next to the documents. Connection wiring moves to its own extension package. The coverage counter and "No requirements" are removed: they push towards a test per method, which the concept calls harmful. | The generated Markdown is the same except the removed lines; a test reads the model file |
-| 2 | **ControlBatyr documents itself.** The library's own entry points and model are marked with its attributes and documented by itself. | The library's documents are generated at its build and committed |
+| 1 | ~~The model.~~ Done. | — |
+| 2 | ~~ControlBatyr documents itself.~~ Postponed [P]: the library has no managers; marking a reader as a manager would be a lie. It needs a second reader (see "Profiles") and gives little value now. | — |
 | 3 | **Class diagram** (Mermaid) per domain from the model, following the architecture diagram profile (`classDiagram` + `%% @arch/1` directives) where GitHub can render it. | Diagrams are in the documents and render on GitHub |
 | 4 | **Extension points.** An extension can add nodes and links to the model (Reqnroll scenarios, handwritten documents) and add output. | Reqnroll scenarios with a tag appear as requirements through an extension, without changes in the core |
 | 5 | **Publish to NuGet** and try on a real product. | Owner's word |
@@ -74,6 +79,26 @@ Each step is a separate pull request.
   library only provides the nodes and the place for the result.
 - **Reqnroll and the documentation** joined, possibly with an AI helper that proposes which operations a scenario
   belongs to; a person accepts the proposal.
+
+- **Profiles: other readers for the same model.** A profile is a reader that fills the model from another
+  kind of source. Candidates: a library (static entry points instead of managers) and a workflow engine (steps
+  and transitions stored as data, not code). Not before the business-core profile proves itself on a real
+  product. Parallels noticed between a workflow and a business core:
+
+  | Business core | Workflow | Note |
+  |---|---|---|
+  | operation | step | a named action with inputs and a result |
+  | object model | step data, bindings | what actions exchange |
+  | event + connection | transition | "after this, that happens" |
+  | requirement (test) | evaluated scenario | proof that it works as said |
+  | — | order of steps | a core has no explicit process |
+  | code, read at build | data, read at run time | only the reader differs |
+
+  A set of connections is an implicit process (choreography); a workflow is an explicit one (orchestration).
+  The core model cannot show a process end to end: it does not know which operation raises which event (we do
+  not look inside methods). Open question: declare it, or take sequences from scenarios.
+- **Outputs are settings.** Markdown, the model file and diagrams are a list of outputs a product turns on and
+  points to a folder.
 
 ## Critique we keep in mind
 
