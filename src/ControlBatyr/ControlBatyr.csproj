@@ -2,6 +2,6 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>ControlBatyr</PackageId>
-    <Description>Role and domain connection attributes for business logic cores.</Description>
+    <Description>Marks business logic roles and domain connections for ControlBatyr documentation.</Description>
   </PropertyGroup>
 </Project>

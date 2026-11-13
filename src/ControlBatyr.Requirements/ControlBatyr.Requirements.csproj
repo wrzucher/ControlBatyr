@@ -2,6 +2,6 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>ControlBatyr.Requirements</PackageId>
-    <Description>Links requirement tests to ControlBatyr manager operations.</Description>
+    <Description>Links requirement tests to ControlBatyr manager operations for generated documentation.</Description>
   </PropertyGroup>
 </Project>

@@ -1,0 +1,33 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build -p:ControlBatyrCheckDocuments=true
+      - run: dotnet test --no-build
+      - name: Verify packages install and work
+        shell: pwsh
+        run: ./tests/PackageSmoke/smoke.ps1
+      - name: Pack with the tag version
+        run: dotnet pack -c Release -p:Version="${GITHUB_REF_NAME#v}" -o release
+      - name: Sign in to nuget.org
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Push packages
+        run: dotnet nuget push 'release/*.nupkg' --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
