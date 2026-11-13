@@ -47,6 +47,8 @@ Places a player's bet on an existing game.
 
 The recorded bet in its initial open state.
 
+**Raises:** [BetPlaced](#type-game-core-gameeventpublisher-betplaced)
+
 **Requirements**
 
 - Placed bet preserves the player game and amount — [Source](../../Game.Tests/GameRequirements.cs)
@@ -92,6 +94,8 @@ Lets the player cancel an open bet before the game starts.
 
 Listeners are notified after the cancellation has been recorded.
 
+**Raises:** [BetCancelled](#type-game-core-gameeventpublisher-betcancelled)
+
 **Requirements**
 
 - Cancelling a bet refunds its bet amount to its players account — [Source](../../Game.Tests/AccountRequirements.cs)
@@ -134,6 +138,8 @@ The player's bet has been placed.
 
 **Payload:** [BetPlacedEventArgs](#type-game-model-betplacedeventargs)
 
+**Raised by:** [PlaceBet](#type-game-core-gamemanager-placebetasync)
+
 <a id="type-game-core-gameeventpublisher-betcancelled"></a>
 
 #### BetCancelled
@@ -141,6 +147,8 @@ The player's bet has been placed.
 The player's bet has been cancelled.
 
 **Payload:** [BetCancelledEventArgs](#type-game-model-betcancelledeventargs)
+
+**Raised by:** [CancelBet](#type-game-core-gamemanager-cancelbetasync)
 
 ## Models
 

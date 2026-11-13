@@ -50,7 +50,7 @@ code, with the code as the single source of truth**. [D]
 | Part | Package | State |
 |---|---|---|
 | Role attributes: manager, object model, event publisher, persistence | `ControlBatyr` | done |
-| Domain connections `[On<T>]`; startup wiring | `ControlBatyr`; `ControlBatyr.Connections` | done |
+| Operation events `[Raises<T>]`; domain connections `[On<T>]`; startup wiring | `ControlBatyr`; `ControlBatyr.Connections` | done |
 | Business API model with identifiers, written as `business-api.json` | `ControlBatyr.Inspection` | done |
 | Business API documents regenerated at build, one file per domain, OpenAPI-like | `ControlBatyr.Inspection` | done |
 | Requirements from tests `[Requirement<T>]` | `ControlBatyr.Requirements` | done |
@@ -100,8 +100,8 @@ Each step is a separate pull request.
   | code, read at build | data, read at run time | only the reader differs |
 
   A set of connections is an implicit process (choreography); a workflow is an explicit one (orchestration).
-  The core model cannot show a process end to end: it does not know which operation raises which event (we do
-  not look inside methods). Decided [D]: it is declared by an attribute on the operation, as in OpenAPI —
+  The core model now links operations to the events they raise through `[Raises<T>]` (done [D]; we do
+  not look inside methods). It is declared by an attribute on the operation, as in OpenAPI —
   everything is attributed, that is the price. Sequences from Reqnroll scenarios are rejected: a product may
   have no Reqnroll at all.
 - **The core is the model; readers are extensions.** [D] The library core is the vocabulary and the pipeline.

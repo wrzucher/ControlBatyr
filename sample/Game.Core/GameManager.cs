@@ -23,6 +23,7 @@ public sealed class GameManager(GamePersistence games, GameEventPublisher publis
     /// <param name="amount">The amount the player bets.</param>
     /// <param name="ct"/>
     /// <returns>The recorded bet in its initial open state.</returns>
+    [Raises<GameEventPublisher>(nameof(GameEventPublisher.BetPlaced))]
     public async Task<Bet> PlaceBetAsync(Guid gameId, Guid playerId, decimal amount, CancellationToken ct = default)
     {
         var game = await games.GameAsync(gameId, ct)
@@ -49,6 +50,7 @@ public sealed class GameManager(GamePersistence games, GameEventPublisher publis
     /// <param name="betId">The bet the player wants to cancel.</param>
     /// <param name="ct"/>
     /// <remarks>Listeners are notified after the cancellation has been recorded.</remarks>
+    [Raises<GameEventPublisher>(nameof(GameEventPublisher.BetCancelled))]
     public async Task CancelBetAsync(Guid betId, CancellationToken ct = default)
     {
         Require(await CancelBetProblemAsync(betId, ct));

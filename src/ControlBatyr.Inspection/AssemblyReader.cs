@@ -14,6 +14,7 @@ internal sealed class AssemblyReader
     private readonly string? documentDirectory;
     private readonly Domain[] domains;
     private readonly Connection[] connections;
+    private readonly HashSet<Type> suppliedPublishers;
     private readonly (Type Manager, string Operation, MethodInfo Test)[] requirements;
 
     private sealed record Domain(Type Manager, Type[] Publishers, HashSet<Type> Models)
@@ -28,6 +29,7 @@ internal sealed class AssemblyReader
             .SelectMany(assembly => assembly.GetTypes().OrderBy(type => type.MetadataToken))
             .Where(type => !Excluded(type)).ToArray();
         requirements = RequirementLinks.Find(types).ToArray();
+        suppliedPublishers = types.Where(type => type.IsDefined(typeof(EventPublisherAttribute), false)).ToHashSet();
         domains = types.Where(type => type.IsDefined(typeof(ManagerAttribute), false)).Select(manager =>
         {
             models.Clear();
@@ -131,7 +133,27 @@ internal sealed class AssemblyReader
             Reference(parameter.ParameterType, nullability.Create(parameter), TupleNames(parameter)), comments.Tag(method, "param", parameter.Name)));
         var tests = requirements.Where(item => owner.IsDefined(typeof(ManagerAttribute), false) && item.Manager == owner && item.Operation == method.Name)
             .Select(item => new BusinessRequirement(Node(item.Test)));
-        return new(node with { Name = name }, [.. parameters], Reference(result, info, TupleNames(method.ReturnParameter)), comments.Tag(method, "returns"), [.. tests]);
+        return new(node with { Name = name }, [.. parameters], Reference(result, info, TupleNames(method.ReturnParameter)),
+            comments.Tag(method, "returns"), [.. tests], RaisedEvents(method));
+    }
+
+    private ImmutableArray<string> RaisedEvents(MethodInfo method)
+    {
+        return [.. method.CustomAttributes
+            .Where(attribute => attribute.AttributeType.IsGenericType
+                && attribute.AttributeType.GetGenericTypeDefinition() == typeof(RaisesAttribute<>))
+            .Select(attribute =>
+            {
+                var publisher = attribute.AttributeType.GetGenericArguments()[0];
+                var name = (string)attribute.ConstructorArguments[0].Value!;
+                var item = publisher.GetEvent(name);
+                if (!suppliedPublishers.Contains(publisher) || item?.AddMethod?.IsStatic != false
+                    || domains.Count(domain => domain.Publishers.Contains(publisher)) != 1)
+                {
+                    throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises {publisher.Name}.{name}, which must be a public instance event on an [EventPublisher] with one publisher domain in the supplied assemblies.");
+                }
+                return Id(item);
+            }).Distinct()];
     }
 
     private static EventInfo[] EventsOf(Type type)

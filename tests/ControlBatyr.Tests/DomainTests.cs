@@ -58,6 +58,52 @@ public sealed class DomainTests
     }
 
     [Fact]
+    public void Raised_events_link_operations_and_events_both_ways_across_domains()
+    {
+        var model = BusinessApiReader.Read(null, typeof(DomainTests).Assembly);
+        var origin = model.Domains.Single(domain => domain.Name == "Origin");
+        var sink = model.Domains.Single(domain => domain.Name == "Sink");
+        var events = origin.Publishers.Single().Events;
+        var record = origin.Operations.Single(operation => operation.Node.Name == "Record");
+        var read = sink.Operations.Single(operation => operation.Node.Name == "Read");
+        var recorded = events.Single(item => item.Node.Name == "Recorded");
+        Assert.Equal(events.Select(item => item.Node.Id), record.Raises);
+        Assert.Equal(recorded.Node.Id, Assert.Single(read.Raises));
+        Assert.Empty(origin.Operations.Single(operation => operation.Node.Name == "Local").Raises);
+
+        var documents = BusinessApiMarkdown.Render(model).ToDictionary(item => item.RelativePath, item => item.Markdown);
+        Assert.Contains("**Raises:** [Recorded](#type-controlbatyr-tests-originpublisher-recorded), [Rejected](#type-controlbatyr-tests-originpublisher-rejected)", documents["origin.reference.md"]);
+        Assert.Contains("**Raises:** [Recorded](origin.reference.md#type-controlbatyr-tests-originpublisher-recorded)", documents["sink.reference.md"]);
+        Assert.Contains("**Raised by:** [Record](#type-controlbatyr-tests-originmanager-record), [Read](sink.reference.md#type-controlbatyr-tests-sinkmanager-read)", documents["origin.reference.md"]);
+        Assert.Contains("**Raised by:** [Record](#type-controlbatyr-tests-originmanager-record)\n", documents["origin.reference.md"]);
+    }
+
+    [Theory]
+    [InlineData(typeof(OriginPublisher), "Missing")]
+    [InlineData(typeof(UnmarkedManager), "Missing")]
+    [InlineData(typeof(UnownedPublisher), "Unused")]
+    [InlineData(typeof(Game.Core.GameEventPublisher), "BetCancelled")]
+    public void Invalid_raised_events_fail_with_the_operation_and_event_identity(Type publisher, string eventName)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("InvalidRaisesCore"), AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Core").DefineType("InvalidRaisesManager", TypeAttributes.Public);
+        type.SetCustomAttribute(new CustomAttributeBuilder(typeof(ManagerAttribute).GetConstructor(Type.EmptyTypes)!, []));
+        var method = type.DefineMethod("Run", MethodAttributes.Public, typeof(void), Type.EmptyTypes);
+        method.SetCustomAttribute(new CustomAttributeBuilder(typeof(RaisesAttribute<>).MakeGenericType(publisher)
+            .GetConstructor([typeof(string)])!, [eventName]));
+        method.GetILGenerator().Emit(OpCodes.Ret);
+        type.CreateType();
+
+        var failure = Assert.Throws<InvalidOperationException>(() => BusinessApiReader.Read(null, assembly, typeof(DomainTests).Assembly));
+
+        Assert.Contains("InvalidRaisesManager.Run", failure.Message);
+        Assert.Contains($"{publisher.Name}.{eventName}", failure.Message);
+        Assert.Contains("public instance event", failure.Message);
+        Assert.Contains("[EventPublisher]", failure.Message);
+        Assert.Contains("supplied assemblies", failure.Message);
+    }
+
+    [Fact]
     public async Task Wiring_awaits_actions_in_fresh_scopes_and_disposes_each_target()
     {
         var (services, recorder, _) = Services();
@@ -184,6 +230,8 @@ public sealed class OriginManager(OriginPublisher publisher)
 {
     public SharedReading Read() => new(new SharedDetails("reading"));
     public OriginOnly Local() => new();
+    [Raises<OriginPublisher>(nameof(OriginPublisher.Recorded))]
+    [Raises<OriginPublisher>(nameof(OriginPublisher.Rejected))]
     public void Record() => publisher.NotifyRecorded(Read());
 }
 
@@ -191,6 +239,7 @@ public sealed class OriginManager(OriginPublisher publisher)
 public sealed class SinkManager(DeliveryRecorder recorder) : IAsyncDisposable
 {
     private readonly Guid instance = Guid.NewGuid();
+    [Raises<OriginPublisher>(nameof(OriginPublisher.Recorded))]
     public SharedReading Read() => new(new SharedDetails("reading"));
     public async Task HandleAsync(SharedReading payload)
     {

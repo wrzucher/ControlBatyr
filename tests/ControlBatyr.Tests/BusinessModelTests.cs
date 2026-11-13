@@ -175,7 +175,7 @@ public sealed class BusinessModelTests
         var ticket = new BusinessNode("A:Fiction|T:Ticket", "Ticket", "An issued ticket.", "", null);
         var requirement = new BusinessRequirement(new("A:Fiction.Tests|M:Checks.Keeps_identifier", "Keeps_identifier", "", "", "../Checks.cs"));
         var operation = new BusinessOperation(issue, [new("id", new("int", null, [], ""), "Requested identifier.")],
-            new("Ticket", ticket.Id, [], "?"), "The issued ticket.", [requirement]);
+            new("Ticket", ticket.Id, [], "?"), "The issued ticket.", [requirement], []);
         var model = new BusinessApiModel([new("Tickets", manager, [operation], [])],
             [new(ticket, false, [], [], [])], []);
 
