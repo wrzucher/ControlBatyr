@@ -10,7 +10,9 @@
     </PropertyGroup>
     <ItemGroup>
       <_ControlBatyrAssembly Include="$(ControlBatyrAssemblies)" />
-      <_ControlBatyrReference Include="@(ReferencePath);@(ReferenceCopyLocalPaths)" />
+      <!-- ReferencePath can contain reference assemblies, which cannot be loaded for execution.
+           The tool host resolves shared framework assemblies from its runtime configuration. -->
+      <_ControlBatyrReference Include="@(ReferenceCopyLocalPaths)" />
     </ItemGroup>
     <WriteLinesToFile File="$(IntermediateOutputPath)controlbatyr-assemblies.txt"
                       Lines="@(_ControlBatyrAssembly->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />

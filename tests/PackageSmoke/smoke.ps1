@@ -33,6 +33,7 @@ foreach ($id in 'ControlBatyr', 'ControlBatyr.Connections', 'ControlBatyr.Requir
         }
         if ($id -eq 'ControlBatyr.Inspection' -and
             ($metadata.developmentDependency -ne 'true' -or
+             $metadata.frameworkReferences -or
              !$archive.GetEntry('build/ControlBatyr.Inspection.targets') -or
              !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Inspection.dll') -or
              !$archive.GetEntry('tools/net10.0/any/ControlBatyr.Inspection.runtimeconfig.json') -or
@@ -83,8 +84,11 @@ $model = Get-Content $modelFile -Raw | ConvertFrom-Json
 if ($model.Domains[0].Operations[0].Node.Id -ne 'A:Consumer|M:PackageSmoke.TicketManager.Issue(System.Int32)') {
     throw 'The model must expose the compiled operation identifier.'
 }
+if ($model.Domains[0].Node.Id -ne 'A:Consumer|T:PackageSmoke.TicketManager') {
+    throw 'The internal manager must appear in the model.'
+}
 $markdown = Get-Content $document -Raw
-foreach ($text in 'Issues a ticket with the requested identifier.', 'Ticket', 'Issued ticket keeps its identifier', '[Source]') {
+foreach ($text in 'Issues a ticket with the requested identifier.', 'TicketManager', 'Issue', 'Issued ticket keeps its identifier', '[Source]') {
     if (!$markdown.Contains($text)) { throw "Generated document is missing: $text" }
 }
 $output = Join-Path $consumer 'bin/Debug/net10.0'
@@ -104,6 +108,11 @@ if ($LASTEXITCODE -eq 0 -or ($stale -join "`n") -notmatch 'documents are stale.*
 }
 Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version"
 Write-Output 'PASS: check mode accepts current documents and rejects stale documents without writing.'
+
+Invoke-Dotnet restore $project --configfile (Join-Path $consumer 'NuGet.Config') --packages $cache "-p:ControlBatyrPackageVersion=$version" "-p:UseRules=true"
+Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version" "-p:UseRules=true"
+Write-Output 'PASS: internal manager operations are documented with an ASP.NET Core framework dependency, with and without Rules.'
+Invoke-Dotnet restore $project --configfile (Join-Path $consumer 'NuGet.Config') --packages $cache "-p:ControlBatyrPackageVersion=$version"
 
 Add-Content (Join-Path $consumer 'Consumer.cs') @'
 
