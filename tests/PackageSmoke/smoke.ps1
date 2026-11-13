@@ -70,13 +70,13 @@ Set-Content (Join-Path $consumer 'NuGet.Config') @"
 $project = Join-Path $consumer 'Consumer.csproj'
 Invoke-Dotnet restore $project --configfile (Join-Path $consumer 'NuGet.Config') --packages $cache "-p:ControlBatyrPackageVersion=$version"
 Invoke-Dotnet build $project --no-restore "-p:ControlBatyrPackageVersion=$version"
-$document = Join-Path $consumer 'docs/ticket.md'
-if (!(Test-Path (Join-Path $consumer 'docs/index.md')) -or !(Test-Path $document)) {
+$document = Join-Path $consumer 'docs/business-api/ticket.md'
+if (!(Test-Path (Join-Path $consumer 'docs/business-api/index.md')) -or !(Test-Path $document)) {
     throw 'The package build did not generate business API documents.'
 }
-$modelFile = Join-Path $consumer 'docs/business-api.json'
+$modelFile = Join-Path $consumer 'docs/business-api/business-api.json'
 if (!(Test-Path $modelFile) -or
-    !(Get-Content (Join-Path $consumer 'docs/.controlbatyr-generated')).Contains('business-api.json')) {
+    !(Get-Content (Join-Path $consumer 'docs/business-api/.controlbatyr-generated')).Contains('business-api.json')) {
     throw 'The model must be generated and owned by the manifest.'
 }
 $model = Get-Content $modelFile -Raw | ConvertFrom-Json

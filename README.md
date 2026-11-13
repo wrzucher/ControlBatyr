@@ -18,7 +18,7 @@ manifest and refuses to overwrite an existing unowned document.
 Use .NET 10. Add `ControlBatyr` to the core and model projects that use its attributes:
 
 ```xml
-<PackageReference Include="ControlBatyr" Version="0.1.0" />
+<PackageReference Include="ControlBatyr" Version="0.1.0-preview.2" />
 ```
 
 In the requirement test project, reference the core project and add:
@@ -29,13 +29,14 @@ In the requirement test project, reference the core project and add:
   <ControlBatyrDocumentationDirectory>../docs/business-api</ControlBatyrDocumentationDirectory>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="ControlBatyr.Requirements" Version="0.1.0" />
-  <PackageReference Include="ControlBatyr.Inspection" Version="0.1.0" PrivateAssets="all" />
+  <PackageReference Include="ControlBatyr.Requirements" Version="0.1.0-preview.2" />
+  <PackageReference Include="ControlBatyr.Inspection" Version="0.1.0-preview.2" PrivateAssets="all" />
 </ItemGroup>
 ```
 
 Enable `GenerateDocumentationFile` in the core and model projects too, so their XML comments are available.
-The only ControlBatyr setting needed is the documentation folder. Inspection runs during the test project's
+Documents go to `docs/business-api` next to the project; set `ControlBatyrDocumentationDirectory` to put them
+elsewhere, as above. Inspection runs during the test project's
 build and adds no runtime dependency. Reference Inspection directly in each project that generates documents.
 
 This setup generates documentation only. Missing comments and pattern violations do not fail inspection;
@@ -46,7 +47,7 @@ To also validate the six shape rules (CB0001–CB0006) and requirement targets (
 alongside Inspection in the project that generates documents:
 
 ```xml
-<PackageReference Include="ControlBatyr.Rules" Version="0.1.0" PrivateAssets="all" />
+<PackageReference Include="ControlBatyr.Rules" Version="0.1.0-preview.2" PrivateAssets="all" />
 ```
 
 Rules run in the same inspection step and fail the build on violations. The Rules package's build target
@@ -71,7 +72,7 @@ appears under the operation with a source link. Unmarked tests are omitted.
 For `[On<TPublisher>]` connections, add this reference to the startup project:
 
 ```xml
-<PackageReference Include="ControlBatyr.Connections" Version="0.1.0" />
+<PackageReference Include="ControlBatyr.Connections" Version="0.1.0-preview.2" />
 ```
 
 Register publishers as singletons, managers as scoped services and logging.

@@ -1,9 +1,10 @@
 <Project>
   <PropertyGroup>
+    <ControlBatyrDocumentationDirectory Condition="'$(ControlBatyrDocumentationDirectory)' == ''">docs/business-api</ControlBatyrDocumentationDirectory>
     <ControlBatyrToolPath Condition="'$(ControlBatyrToolPath)' == ''">$(MSBuildThisFileDirectory)../tools/net10.0/any/ControlBatyr.Inspection.dll</ControlBatyrToolPath>
   </PropertyGroup>
   <Target Name="GenerateControlBatyrBusinessApi" AfterTargets="Build"
-          Condition="'$(ControlBatyrDocumentationDirectory)' != '' and '$(DesignTimeBuild)' != 'true' and '$(IsCrossTargetingBuild)' != 'true'">
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(IsCrossTargetingBuild)' != 'true'">
     <PropertyGroup>
       <ControlBatyrAssemblies Condition="'$(ControlBatyrAssemblies)' == ''">$(TargetPath)</ControlBatyrAssemblies>
     </PropertyGroup>
