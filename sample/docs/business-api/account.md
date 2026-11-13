@@ -12,10 +12,16 @@ Holds players' funds and returns cancelled bet amounts.
 
 - [RefundBet](account.reference.md#type-game-core-accountmanager-refundbetasync) — Returns the bet amount to the player after cancellation.
 
+## Events
+
+- [BetRefunded](account.reference.md#type-game-core-betrefunded) — A cancelled bet amount was returned to the player.
+
 ## Connections
 
 - [RefundBet](account.reference.md#type-game-core-gameaccountconnections-refundbetasync) — Return the bet amount to the player's account after cancellation.
 
 ## Models
+
+- [BetRefunded](account.reference.md#type-game-core-betrefunded) — A cancelled bet amount was returned to the player.
 
 - [Account](account.reference.md#type-game-model-account) — The funds available to a player.

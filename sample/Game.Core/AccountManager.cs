@@ -16,6 +16,7 @@ public sealed class AccountManager(AccountPersistence accounts)
     public Task<Account> AccountAsync(Guid playerId, CancellationToken ct = default) => accounts.AccountAsync(playerId, ct);
 
     /// <summary>Returns the bet amount to the player after cancellation.</summary>
+    [Raises<BetRefunded>]
     public Task RefundBetAsync(Guid playerId, Guid betId, decimal amount, CancellationToken ct = default) =>
         accounts.RefundBetAsync(playerId, betId, amount, ct);
 }

@@ -131,10 +131,31 @@
               }
             }
           ],
-          "raises": []
+          "raises": [
+            "A:Game.Core|T:Game.Core.BetRefunded"
+          ]
         }
       ],
-      "publishers": []
+      "publishers": [],
+      "recordEvents": [
+        {
+          "node": {
+            "id": "A:Game.Core|T:Game.Core.BetRefunded",
+            "name": "BetRefunded",
+            "summary": "A cancelled bet amount was returned to the player.",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/BetRefunded.cs"
+          },
+          "payloads": [
+            {
+              "name": "BetRefunded",
+              "modelId": "A:Game.Core|T:Game.Core.BetRefunded",
+              "arguments": [],
+              "suffix": ""
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "Game",
@@ -449,10 +470,70 @@
             }
           ]
         }
-      ]
+      ],
+      "recordEvents": []
     }
   ],
   "models": [
+    {
+      "node": {
+        "id": "A:Game.Core|T:Game.Core.BetRefunded",
+        "name": "BetRefunded",
+        "summary": "A cancelled bet amount was returned to the player.",
+        "remarks": "",
+        "sourceFile": "../../Game.Core/BetRefunded.cs"
+      },
+      "isEnum": false,
+      "properties": [
+        {
+          "node": {
+            "id": "A:Game.Core|P:Game.Core.BetRefunded.PlayerId",
+            "name": "PlayerId",
+            "summary": "",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/BetRefunded.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|P:Game.Core.BetRefunded.BetId",
+            "name": "BetId",
+            "summary": "",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/BetRefunded.cs"
+          },
+          "type": {
+            "name": "Guid",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        },
+        {
+          "node": {
+            "id": "A:Game.Core|P:Game.Core.BetRefunded.Amount",
+            "name": "Amount",
+            "summary": "",
+            "remarks": "",
+            "sourceFile": "../../Game.Core/BetRefunded.cs"
+          },
+          "type": {
+            "name": "decimal",
+            "arguments": [],
+            "suffix": ""
+          },
+          "computed": false
+        }
+      ],
+      "methods": [],
+      "values": []
+    },
     {
       "node": {
         "id": "A:Game.Model|T:Game.Model.Account",

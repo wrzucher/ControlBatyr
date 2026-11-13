@@ -176,7 +176,7 @@ public sealed class BusinessModelTests
         var requirement = new BusinessRequirement(new("A:Fiction.Tests|M:Checks.Keeps_identifier", "Keeps_identifier", "", "", "../Checks.cs"));
         var operation = new BusinessOperation(issue, [new("id", new("int", null, [], ""), "Requested identifier.")],
             new("Ticket", ticket.Id, [], "?"), "The issued ticket.", [requirement], []);
-        var model = new BusinessApiModel([new("Tickets", manager, [operation], [])],
+        var model = new BusinessApiModel([new("Tickets", manager, [operation], [], [])],
             [new(ticket, false, [], [], [])], []);
 
         var documents = BusinessApiMarkdown.Render(model).ToDictionary(document => document.RelativePath, document => document.Markdown);
