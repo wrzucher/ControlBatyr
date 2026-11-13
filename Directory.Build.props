@@ -8,7 +8,8 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <IsPackable>false</IsPackable>
     <Version>0.1.0</Version>
-    <Authors>ControlBatyr</Authors>
+    <Authors>Wrzucher</Authors>
+    <PackageTags>documentation;business-logic;architecture;openapi</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/wrzucher/ControlBatyr</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

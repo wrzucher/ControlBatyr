@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Description>Asynchronous domain connection wiring for ControlBatyr.</Description>
+    <Description>Wires asynchronous event delivery between ControlBatyr domains.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../ControlBatyr/ControlBatyr.csproj" />

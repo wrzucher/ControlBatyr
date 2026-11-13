@@ -112,3 +112,9 @@ and sets `ControlBatyrToolPath` to its built DLL. The package layout includes th
 and the executable and runtime dependencies under `tools/net10.0/any/`.
 The sample also references the Rules project with `ReferenceOutputAssembly="false"` and sets
 `ControlBatyrRulesPath` to its built DLL, matching the Rules package target.
+
+## Releasing
+
+Push a tag `vX.Y.Z[-preview.N]`, for example `v0.1.0-preview.1`, to publish all five packages to nuget.org.
+The tag without `v` overrides the package version in `Directory.Build.props`.
+The release workflow builds, tests and smoke-tests the packages before publishing with NuGet Trusted Publishing.
