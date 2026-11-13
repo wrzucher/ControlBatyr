@@ -1,17 +1,15 @@
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using ControlBatyr.Inspection;
 
 try
 {
-    if (args.Length != 5)
+    if (args.Length is not (5 or 6))
     {
-        throw new ArgumentException("Usage: ControlBatyr.Inspection <documentation folder> <assembly list file> <reference list file> <rules assembly or empty> <check documents>");
+        throw new ArgumentException("Usage: ControlBatyr.Inspection <documentation folder> <assembly list file> <reference list file> <rules assembly or empty> <check documents> [outputs]");
     }
 
+    var outputs = Outputs.Select(args.Length == 6 ? args[5] : "markdown;model");
     var assemblies = File.ReadAllLines(args[1]).Where(line => !string.IsNullOrWhiteSpace(line)).Select(Path.GetFullPath).ToArray();
     if (assemblies.Length == 0)
     {
@@ -41,19 +39,15 @@ try
         return 1;
     }
     var model = BusinessApiReader.Read(directory, types.Select(type => type.Assembly).Distinct().ToArray());
-    var documents = BusinessApiMarkdown.Render(model).Append(("business-api.json",
-        JsonSerializer.Serialize(model, new JsonSerializerOptions
-        {
-            WriteIndented = true, NewLine = "\n", PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        }) + "\n")).ToArray();
+    var documents = outputs.SelectMany(output => output.Render(model)).ToArray();
+    bool IsEnabled(string file) => outputs.Any(output => output.Owns(file));
     if (args[4].Equals("true", StringComparison.OrdinalIgnoreCase))
     {
-        GeneratedFiles.Check(directory, documents);
+        if (outputs.Length > 0) GeneratedFiles.Check(directory, documents, IsEnabled);
     }
     else
     {
-        GeneratedFiles.Write(directory, documents);
+        if (outputs.Length > 0) GeneratedFiles.Write(directory, documents, IsEnabled);
     }
     Console.WriteLine($"ControlBatyr: {(args[4].Equals("true", StringComparison.OrdinalIgnoreCase) ? "checked" : "generated")} {documents.Length} business API documents in {directory}.");
     return 0;

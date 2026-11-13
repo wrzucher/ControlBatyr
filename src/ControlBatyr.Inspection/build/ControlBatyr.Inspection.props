@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <ControlBatyrOutputs Condition="'$(ControlBatyrOutputs)' == ''">markdown;model</ControlBatyrOutputs>
+  </PropertyGroup>
+</Project>
