@@ -39,6 +39,11 @@ code, with the code as the single source of truth**. [D]
 8. **No fixed prompts.** Defaults exist, but a product can replace any prompt any way it likes — through a
    prompt provider. It must be obvious where a prompt comes from. [D]
 9. **Start simple, add when it hurts.** [D]
+10. **First see, then enrich, then tighten.** [D] Now it is a small project that helps to see the business
+    layer: beautiful generated documentation. Then AI raises the value of the documents. Forcing a product to
+    follow the architecture (rules, analyzers, required attributes) is the last stage, only after the first two
+    work. A missing attribute means a missing link in the document; the reader of the document notices and adds
+    it. The most the library does for now is a hint in the documents.
 
 ## What exists
 
