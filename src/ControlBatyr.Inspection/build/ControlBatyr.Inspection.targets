@@ -10,14 +10,7 @@
     </PropertyGroup>
     <ItemGroup>
       <_ControlBatyrAssembly Include="$(ControlBatyrAssemblies)" />
-      <!-- Runtime assets exist even when a class library does not copy NuGet dependencies.
-           Compile assets may be ref assemblies; shared frameworks come from the tool host. -->
-      <_ControlBatyrReference Include="@(RuntimeCopyLocalItems)" />
-      <_ControlBatyrReference Include="@(ReferenceCopyLocalPaths)" />
-      <_ControlBatyrReference Include="@(RuntimeTargetsCopyLocalItems)"
-                              Condition="'%(RuntimeTargetsCopyLocalItems.AssetType)' == 'runtime'" />
-      <_ControlBatyrReference Include="@(ReferencePath)"
-                              Condition="'%(ReferencePath.FrameworkReferenceName)' == '' and '%(ReferencePath.NuGetPackageId)' == ''" />
+      <_ControlBatyrReference Include="@(ReferencePath)" />
     </ItemGroup>
     <WriteLinesToFile File="$(IntermediateOutputPath)controlbatyr-assemblies.txt"
                       Lines="@(_ControlBatyrAssembly->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />

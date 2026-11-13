@@ -123,7 +123,8 @@ public sealed class GeneratedFilesTests : IDisposable
         var assemblyList = Path.Combine(directory, "assemblies.txt");
         var referenceList = Path.Combine(directory, "references.txt");
         File.WriteAllText(assemblyList, invalidCore ? typeof(RulesTests).Assembly.Location : Path.Combine(directory, "missing-core.dll"));
-        File.WriteAllText(referenceList, "");
+        File.WriteAllLines(referenceList, Directory.GetFiles(AppContext.BaseDirectory, "*.dll")
+            .Concat(Directory.GetFiles(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "*.dll")));
         var testAssembly = typeof(GeneratedFilesTests).Assembly.Location;
         var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in new[] { "exec", "--runtimeconfig", Path.ChangeExtension(testAssembly, ".runtimeconfig.json"),

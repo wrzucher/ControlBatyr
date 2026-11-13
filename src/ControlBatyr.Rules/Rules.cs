@@ -30,7 +30,7 @@ internal static class Rules
         foreach (var requirement in RequirementLinks.Find(types))
         {
             if (!Role<ManagerAttribute>(requirement.Manager)
-                || requirement.Manager.IsDefined(typeof(PersistenceAttribute), false)
+                || requirement.Manager.HasAttribute<PersistenceAttribute>()
                 || !AssemblyReader.MethodsOf(requirement.Manager).Any(method => method.Name == requirement.Operation))
             {
                 Error("CB0007", requirement.Test,
@@ -45,7 +45,7 @@ internal static class Rules
             {
                 foreach (var parameter in constructor.GetParameters())
                 {
-                    if (Role<ManagerAttribute>(parameter.ParameterType) || typeof(IServiceProvider).IsAssignableFrom(parameter.ParameterType))
+                    if (Role<ManagerAttribute>(parameter.ParameterType) || parameter.ParameterType.IsType("System.IServiceProvider") || parameter.ParameterType.GetInterfaces().Any(item => item.IsType("System.IServiceProvider")))
                     {
                         Error("CB0001", constructor, $"receives {parameter.ParameterType.Name}: use [On] to connect domains or call both managers from the consumer; do not inject managers or service providers.");
                     }
@@ -98,7 +98,7 @@ internal static class Rules
             foreach (var property in model.GetProperties(Public))
             {
                 if (property.SetMethod is { IsPublic: true } setter
-                    && !setter.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
+                    && !setter.ReturnParameter.GetRequiredCustomModifiers().Any(type => type.IsType("System.Runtime.CompilerServices.IsExternalInit")))
                 {
                     Error("CB0006", property, "has a public setter: use init or a read-only property.");
                 }
@@ -126,22 +126,22 @@ internal static class Rules
         }
     }
 
-    private static bool Role<T>(Type type) where T : Attribute => type.IsDefined(typeof(T), false);
+    private static bool Role<T>(Type type) where T : Attribute => type.HasAttribute<T>();
 
     private static IEnumerable<MethodInfo> Methods(Type type) => type.GetMethods(Public)
-        .Where(method => !method.IsSpecialName && method.DeclaringType != typeof(object)
-            && !method.IsDefined(typeof(CompilerGeneratedAttribute), false));
+        .Where(method => !method.IsSpecialName && !method.DeclaringType.IsType("System.Object")
+            && !method.HasAttribute<CompilerGeneratedAttribute>());
 
     private static bool Simple(Type type)
     {
-        type = Nullable.GetUnderlyingType(type) ?? type;
-        return type.IsPrimitive || type.IsEnum || type == typeof(decimal) || type == typeof(string)
-            || type == typeof(Guid) || type == typeof(DateTime) || type == typeof(DateTimeOffset)
-            || type == typeof(DateOnly) || type == typeof(TimeOnly) || type == typeof(TimeSpan)
-            || type == typeof(CancellationToken);
+        type = MetadataTypes.NullableUnderlyingType(type) ?? type;
+        return type.IsPrimitive || type.IsEnum || type.IsType("System.Decimal") || type.IsType("System.String")
+            || type.IsType("System.Guid") || type.IsType("System.DateTime") || type.IsType("System.DateTimeOffset")
+            || type.IsType("System.DateOnly") || type.IsType("System.TimeOnly") || type.IsType("System.TimeSpan")
+            || type.IsType("System.Threading.CancellationToken");
     }
 
-    private static bool AnyEvent(Type type) => type == typeof(object) || type == typeof(EventArgs)
+    private static bool AnyEvent(Type type) => type.IsType("System.Object") || type.IsType("System.EventArgs")
         || type.IsGenericParameter || (type.HasElementType && AnyEvent(type.GetElementType()!))
         || (type.IsGenericType && type.GetGenericArguments().Any(AnyEvent));
 }
