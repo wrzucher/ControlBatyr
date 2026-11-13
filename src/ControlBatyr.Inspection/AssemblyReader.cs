@@ -284,8 +284,12 @@ internal sealed class AssemblyReader
 
     internal static IEnumerable<MethodInfo> MethodsOf(Type type)
     {
+        var equalityMethods = type.GetInterfaces()
+            .Where(item => item.IsGenericType && item.GetGenericTypeDefinition() == typeof(IEquatable<>))
+            .SelectMany(item => type.GetInterfaceMap(item).TargetMethods).ToHashSet();
         return type.GetMethods(PublicMembers)
-            .Where(method => !method.IsSpecialName && method.DeclaringType != typeof(object)
+            .Where(method => !method.IsSpecialName && method.GetBaseDefinition().DeclaringType != typeof(object)
+                && !equalityMethods.Contains(method)
                 && !method.IsDefined(typeof(CompilerGeneratedAttribute), false))
             .OrderBy(method => method.MetadataToken);
     }

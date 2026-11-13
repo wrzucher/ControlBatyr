@@ -8,12 +8,19 @@ public sealed class ProductNoiseTests
     private static BusinessApiModel Read() => BusinessApiReader.Read(null, typeof(ProductNoiseTests).Assembly);
 
     [Fact]
-    public void Record_models_include_only_authored_methods()
+    public void Class_models_exclude_object_overrides_and_equatable_implementations()
+    {
+        var model = Read().Models.Single(item => item.Node.Name == nameof(EquatableTicket));
+        Assert.Equal(["Approve"], model.Methods.Select(item => item.Node.Name));
+    }
+
+    [Fact]
+    public void Record_models_include_only_authored_subject_methods()
     {
         var model = Read();
         Assert.Empty(model.Models.Single(item => item.Node.Name == nameof(TicketRecord)).Methods);
         Assert.Empty(model.Models.Single(item => item.Node.Name == nameof(TicketValue)).Methods);
-        Assert.Equal(["ToString", "GetHashCode", "Equals", "Deconstruct"],
+        Assert.Equal(["Deconstruct"],
             model.Models.Single(item => item.Node.Name == nameof(AuthoredTicket)).Methods.Select(item => item.Node.Name));
     }
 
@@ -43,7 +50,7 @@ public sealed class ProductNoiseTests
         var model = full with
         {
             Domains = [.. full.Domains.Where(item => item.Name is "TicketNoise" or "OtherTicketNoise")],
-            Models = [.. full.Models.Where(item => item.Node.Name is nameof(TicketRecord) or nameof(TicketValue) or nameof(AuthoredTicket) or nameof(TupleTicket))],
+            Models = [.. full.Models.Where(item => item.Node.Name is nameof(TicketRecord) or nameof(TicketValue) or nameof(AuthoredTicket) or nameof(EquatableTicket) or nameof(TupleTicket))],
             Connections = []
         };
         Check(model);
@@ -63,6 +70,7 @@ internal sealed class TicketNoiseManager
     public TicketRecord Read() => new(1);
     public TicketValue ReadValue() => new(1);
     public AuthoredTicket ReadAuthored() => new();
+    public EquatableTicket ReadEquatable() => new();
     public TupleTicket ReadTuple() => new();
     public Task<(string? ModelKey, string? Effort)> SelectAsync((string? ModelKey, string? Effort) selection) => Task.FromResult(selection);
 }
@@ -75,6 +83,15 @@ internal sealed class OtherTicketNoiseManager
 
 internal sealed record TicketRecord(int Id);
 internal readonly record struct TicketValue(int Id);
+
+internal sealed class EquatableTicket : IEquatable<EquatableTicket>
+{
+    public override bool Equals(object? obj) => obj is EquatableTicket other && Equals(other);
+    public override int GetHashCode() => 0;
+    public override string ToString() => "Ticket";
+    public bool Equals(EquatableTicket? other) => other is not null;
+    public void Approve() { }
+}
 
 internal sealed record AuthoredTicket
 {
