@@ -96,7 +96,12 @@ Each step is a separate pull request.
 
   A set of connections is an implicit process (choreography); a workflow is an explicit one (orchestration).
   The core model cannot show a process end to end: it does not know which operation raises which event (we do
-  not look inside methods). Open question: declare it, or take sequences from scenarios.
+  not look inside methods). Decided [D]: it is declared by an attribute on the operation, as in OpenAPI —
+  everything is attributed, that is the price. Sequences from Reqnroll scenarios are rejected: a product may
+  have no Reqnroll at all.
+- **The core is the model; readers are extensions.** [D] The library core is the vocabulary and the pipeline.
+  The manager pattern is the first reader, a workflow engine could be the second. They stay in one package
+  until a second reader really appears; in code they are already separate.
 - **Outputs are settings.** Markdown, the model file and diagrams are a list of outputs a product turns on and
   points to a folder.
 
