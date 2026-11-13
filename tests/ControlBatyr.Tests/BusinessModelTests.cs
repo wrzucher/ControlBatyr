@@ -43,6 +43,54 @@ public sealed class BusinessModelTests
     }
 
     [Fact]
+    public void Overview_lists_business_summaries_and_links_to_reference_details_in_section_order()
+    {
+        var model = ReadSample();
+        var domain = model.Domains.Single(item => item.Name == "Game");
+        var documents = BusinessApiMarkdown.Render(model).ToDictionary(item => item.RelativePath, item => item.Markdown);
+        var overview = documents["game.md"];
+        Assert.StartsWith("# Game\n\n" + domain.Node.Summary + "\n", overview);
+        Assert.Contains("[Reference](game.reference.md)", overview);
+        var locations = MarkdownRenderer.Locations(model);
+        var nodes = domain.Operations.Select(item => item.Node)
+            .Concat(domain.Publishers.SelectMany(item => item.Events).Select(item => item.Node))
+            .Concat(model.Connections.Select(item => item.Node with { Name = "RefundBet" }))
+            .Concat(model.Models.Where(item => locations[item.Node.Id].File == "game.reference.md").Select(item => item.Node));
+        foreach (var node in nodes)
+        {
+            var location = locations[node.Id];
+            Assert.Contains($"- [{node.Name}]({location.File}#{location.Anchor}) — {node.Summary}\n", overview);
+        }
+        var sections = new[] { "## Operations", "## Events", "## Connections", "## Models" };
+        Assert.Equal(sections, sections.OrderBy(section => overview.IndexOf(section, StringComparison.Ordinal)));
+        foreach (var detail in new[] { "**Parameters", "**Returns", "**Payload", "**Remarks", "**Requirements", "[Source]", "| Name | Type", "<a id=" })
+        {
+            Assert.DoesNotContain(detail, overview);
+        }
+        Assert.Contains("[Game](game.md) — " + domain.Node.Summary, documents["index.md"]);
+        Assert.Contains("[Overview](game.md)", documents["game.reference.md"]);
+    }
+
+    [Fact]
+    public void Missing_summaries_leave_only_linked_names_in_overview_lists_and_the_index()
+    {
+        var model = BusinessApiReader.Read(null, typeof(BusinessModelTests).Assembly);
+        var documents = BusinessApiMarkdown.Render(model).ToDictionary(item => item.RelativePath, item => item.Markdown);
+        Assert.Contains("- [Gateway](gateway.md)\n", documents["index.md"]);
+        var overview = documents["gateway.md"];
+        Assert.Contains("- [Find](gateway.reference.md#type-controlbatyr-tests-gateway-findasync) — Looks up a reading.\n", overview);
+        Assert.Contains("- [Save](gateway.reference.md#type-controlbatyr-tests-gateway-saveasync)\n", overview);
+        Assert.Contains("- [ReadingState](gateway.reference.md#type-controlbatyr-tests-readingstate)\n", overview);
+        Assert.DoesNotContain("|", overview);
+        var overloads = model.Domains.Single(item => item.Name == "Overloads").Operations;
+        var locations = MarkdownRenderer.Locations(model);
+        foreach (var operation in overloads)
+        {
+            Assert.Contains($"- [Find](overloads.reference.md#{locations[operation.Node.Id].Anchor})\n", documents["overloads.md"]);
+        }
+    }
+
+    [Fact]
     public void Generated_model_round_trips_and_renders_the_committed_Markdown()
     {
         var directory = SampleDirectory();
@@ -133,12 +181,12 @@ public sealed class BusinessModelTests
 
         var documents = BusinessApiMarkdown.Render(model).ToDictionary(document => document.RelativePath, document => document.Markdown);
 
-        Assert.Contains("[Source](../Tickets.cs)", documents["tickets.md"]);
-        Assert.Contains("| id | int | Requested identifier. |", documents["tickets.md"]);
-        Assert.Contains("**Returns:** [Ticket](#type-ticket)?", documents["tickets.md"]);
-        Assert.Contains("**Remarks**\n\nOnce per request.", documents["tickets.md"]);
-        Assert.Contains("- Keeps identifier — [Source](../Checks.cs)", documents["tickets.md"]);
-        Assert.Contains("An issued ticket.", documents["tickets.md"]);
+        Assert.Contains("[Source](../Tickets.cs)", documents["tickets.reference.md"]);
+        Assert.Contains("| id | int | Requested identifier. |", documents["tickets.reference.md"]);
+        Assert.Contains("**Returns:** [Ticket](#type-ticket)?", documents["tickets.reference.md"]);
+        Assert.Contains("**Remarks**\n\nOnce per request.", documents["tickets.reference.md"]);
+        Assert.Contains("- Keeps identifier — [Source](../Checks.cs)", documents["tickets.reference.md"]);
+        Assert.Contains("An issued ticket.", documents["tickets.reference.md"]);
     }
 
     [Fact]

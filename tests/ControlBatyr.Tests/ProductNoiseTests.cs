@@ -28,7 +28,7 @@ public sealed class ProductNoiseTests
     public void Tuple_properties_parameters_and_async_returns_keep_element_names_and_nullability()
     {
         var documents = BusinessApiMarkdown.Render(Read()).ToDictionary(item => item.RelativePath, item => item.Markdown);
-        var text = documents["ticketnoise.md"];
+        var text = documents["ticketnoise.reference.md"];
         Assert.Contains("| Selection | (string? ModelKey, string? Effort) |", text);
         Assert.Contains("| selection | (string? ModelKey, string? Effort) |", text);
         Assert.Contains("**Returns:** (string? ModelKey, string? Effort)", text);
@@ -40,7 +40,7 @@ public sealed class ProductNoiseTests
         Assert.DoesNotContain("ValueTuple", text);
         var model = Read();
         var restored = System.Text.Json.JsonSerializer.Deserialize<BusinessApiModel>(System.Text.Json.JsonSerializer.Serialize(model))!;
-        Assert.Equal(documents["ticketnoise.md"], BusinessApiMarkdown.Render(restored).Single(item => item.RelativePath == "ticketnoise.md").Markdown);
+        Assert.Equal(documents["ticketnoise.reference.md"], BusinessApiMarkdown.Render(restored).Single(item => item.RelativePath == "ticketnoise.reference.md").Markdown);
     }
 
     [Fact]

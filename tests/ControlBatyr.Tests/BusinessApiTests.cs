@@ -6,7 +6,7 @@ namespace ControlBatyr.Tests;
 
 public sealed class BusinessApiTests
 {
-    private static string Generate() => BusinessApi.Generate(typeof(BusinessApiTests).Assembly).Single(document => document.RelativePath == "gateway.md").Markdown;
+    private static string Generate() => BusinessApi.Generate(typeof(BusinessApiTests).Assembly).Single(document => document.RelativePath == "gateway.reference.md").Markdown;
 
     [Fact]
     public void Attributes_select_operations_and_events_but_unreachable_and_persistence_types_stay_hidden()
@@ -136,7 +136,7 @@ public sealed class BusinessApiTests
     public void Source_links_use_the_document_directory_without_absolute_paths_or_line_numbers()
     {
         var directory = Path.GetDirectoryName(TestFile())!;
-        var markdown = BusinessApi.Generate(Path.Combine(directory, "docs"), typeof(BusinessApiTests).Assembly).Single(document => document.RelativePath == "gateway.md").Markdown;
+        var markdown = BusinessApi.Generate(Path.Combine(directory, "docs"), typeof(BusinessApiTests).Assembly).Single(document => document.RelativePath == "gateway.reference.md").Markdown;
 
         Assert.Contains("### Gateway\n\n[Source](../BusinessApiTests.cs)", markdown);
         Assert.Contains("### Snapshot\n\n[Source](../BusinessApiTests.cs)", markdown);

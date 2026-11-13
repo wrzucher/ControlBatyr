@@ -8,4 +8,4 @@
 
 ## Connections
 
-- [Game.BetCancelled](game.md#type-game-core-gameeventpublisher-betcancelled) → [Account](account.md): RefundBet — Return the bet amount to the player's account after cancellation.
+- [Game.BetCancelled](game.reference.md#type-game-core-gameeventpublisher-betcancelled) → [Account](account.md): RefundBet — Return the bet amount to the player's account after cancellation.
