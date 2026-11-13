@@ -1,5 +1,7 @@
 using ControlBatyr;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ControlBatyr.Requirements;
 
 namespace PackageSmoke;
@@ -22,12 +24,14 @@ internal static class Program
 
 /// <summary>Offers tickets for a fictional event.</summary>
 [Manager]
-public sealed class TicketManager(TicketPublisher publisher)
+internal sealed class TicketManager(TicketPublisher publisher, ILogger<TicketManager> logger)
 {
     private readonly TicketPublisher publisher = publisher;
+    private readonly ILogger<TicketManager> logger = logger;
     /// <summary>Issues a ticket with the requested identifier.</summary>
     public Ticket Issue(int id)
     {
+        logger.LogDebug("Issuing ticket {Id}.", id);
         var ticket = new Ticket(id);
         publisher.NotifyIssued(ticket);
         return ticket;
@@ -43,7 +47,7 @@ public static class TicketRequirements
     [Requirement<TicketManager>(nameof(TicketManager.Issue))]
     public static void Issued_ticket_keeps_its_identifier()
     {
-        if (new TicketManager(new TicketPublisher()).Issue(42).Id != 42)
+        if (new TicketManager(new TicketPublisher(), NullLogger<TicketManager>.Instance).Issue(42).Id != 42)
         {
             throw new InvalidOperationException("The ticket must keep its identifier.");
         }
