@@ -70,9 +70,9 @@ Each step is a separate pull request.
 | 1 | ~~The model.~~ Done. | — |
 | 2 | ~~ControlBatyr documents itself.~~ Postponed [P]: the library has no managers; marking a reader as a manager would be a lie. It needs a second reader (see "Profiles") and gives little value now. | — |
 | 3 | ~~Class diagram (Mermaid) per domain from the model, with `classDiagram` and `%% @arch/1` directives.~~ Done. | Opt-in diagrams are in the sample documents using GitHub-supported syntax |
-| 4 | **Extension points.** An extension can add nodes and links to the model (Reqnroll scenarios, handwritten documents) and add output. | Reqnroll scenarios with a tag appear as requirements through an extension, without changes in the core |
+| 4 | **Enrichment** ([design](enrichment.md)): a product declares sections it wants in the document; a producer command computes each; results are stored next to the element with an input hash and recomputed only when it changes. Replaces the former "extension points" step. | A sample product has a section produced by a sample command, shown in Markdown, recomputed only for changed elements |
 | 5 | **Publish to NuGet** and try on a real product. | Owner's word |
-| 6 | **AI extension** (`Microsoft.Extensions.AI`, `IChatClient`): a separate project and command; prompt provider; generated statements carry the identifiers they are grounded on; stale statements are detected by the fingerprint of their grounds. | To be discussed before work |
+| 6 | **AI producer** for enrichment (`Microsoft.Extensions.AI`): a separate package or sample; statements carry the identifiers they are grounded on; staleness comes from the section input hash. | After step 4 is used on a real product; owner's word before any paid run |
 
 ## Ideas kept for later [D]
 
