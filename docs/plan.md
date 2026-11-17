@@ -44,6 +44,14 @@ code, with the code as the single source of truth**. [D]
     follow the architecture (rules, analyzers, required attributes) is the last stage, only after the first two
     work. A missing attribute means a missing link in the document; the reader of the document notices and adds
     it. The most the library does for now is a hint in the documents.
+11. **An operation is the use case; an object model is a projection.** [D] An operation of a domain manager
+    reads the stored state, checks whether the action is allowed, writes, and returns its result or a refusal
+    reason. An object model only shows state to a screen and calls the operation; it never decides, and an
+    operation never waits for a projection to catch up ("read your writes" through a screen model is a design
+    error, not a synchronization problem). Found in a real product: use cases and their preconditions lived in
+    the object models over an asynchronously refreshed memory, the managers degraded into data access, and every
+    command needed a "wait until the memory catches up" barrier. The documents should make this visible: an
+    operation without a refusal path next to an object model that decides is a hint.
 
 ## What exists
 
