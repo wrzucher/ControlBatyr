@@ -33,7 +33,7 @@ internal sealed class AssemblyReader
         {
             models.Clear();
             DiscoverMethods(manager);
-            var publishers = manager.GetConstructors().SelectMany(constructor => constructor.GetParameters())
+            var publishers = manager.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).SelectMany(constructor => constructor.GetParameters())
                 .Select(parameter => parameter.ParameterType)
                 .Where(type => type.HasAttribute<EventPublisherAttribute>()).Distinct().ToArray();
             foreach (var parameter in publishers.SelectMany(EventsOf).SelectMany(EventParameters))

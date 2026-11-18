@@ -150,9 +150,16 @@ public sealed class BusinessApiTests
 }
 
 [Manager]
-public sealed class Gateway(Feed feed)
+public sealed class Gateway
 {
-    private readonly Feed feed = feed;
+    private readonly Feed feed;
+
+    // A public manager whose dependencies are internal is wired through an internal constructor.
+    internal Gateway(Feed feed)
+    {
+        this.feed = feed;
+    }
+
     /// <summary>Looks up a reading.</summary>
     /// <param name="id">The reading to look up.</param>
     /// <param name="ct"/>
