@@ -84,6 +84,7 @@ appears under the operation with a source link. Unmarked tests are omitted.
 Declare which events an operation raises with `[Raises<GameEventPublisher>(nameof(GameEventPublisher.BetCancelled))]`;
 the model and reference pages link operations and events both ways.
 
+A class marked `[EventPublisher<GameManager>]` is the event publisher of that manager's domain.
 A class or record marked `[Event<AccountManager>]` declares an event of that manager's domain.
 Use `[Raises<BetRefunded>]` without an event name on an operation that announces it. Its public
 properties form the documented payload, and it appears even when no operation raises it.

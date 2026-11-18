@@ -99,7 +99,7 @@ public sealed class DomainTests
         Assert.Contains("InvalidRaisesManager.Run", failure.Message);
         Assert.Contains($"{publisher.Name}.{eventName}", failure.Message);
         Assert.Contains("public instance event", failure.Message);
-        Assert.Contains("[EventPublisher]", failure.Message);
+        Assert.Contains("[EventPublisher<TManager>]", failure.Message);
         Assert.Contains("supplied assemblies", failure.Message);
     }
 
@@ -174,6 +174,22 @@ public sealed class DomainTests
         Assert.Contains("InvalidRecordRaisesManager.Run", failure.Message);
         Assert.Contains(target.Name, failure.Message);
         Assert.Contains(message, failure.Message);
+    }
+
+    [Fact]
+    public void A_publisher_declared_for_multiple_domains_is_rejected()
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("AmbiguousPublisherCore"), AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Core").DefineType("AmbiguousPublisher", TypeAttributes.Public);
+        foreach (var manager in new[] { typeof(OriginManager), typeof(SinkManager) })
+        {
+            type.SetCustomAttribute(new CustomAttributeBuilder(typeof(EventPublisherAttribute<>).MakeGenericType(manager)
+                .GetConstructor(Type.EmptyTypes)!, []));
+        }
+        type.CreateType();
+        var failure = Assert.Throws<InvalidOperationException>(() => BusinessApiReader.Read(null, assembly, typeof(DomainTests).Assembly));
+        Assert.Contains("AmbiguousPublisher", failure.Message);
+        Assert.Contains("exactly one [EventPublisher<TManager>] domain", failure.Message);
     }
 
     [Fact]
@@ -357,7 +373,7 @@ public sealed record OriginOnly;
 [ObjectModel]
 public sealed record UnexposedModel;
 
-[EventPublisher]
+[EventPublisher<OriginManager>]
 public sealed class OriginPublisher
 {
     public event Action<SharedReading>? Recorded;
@@ -366,7 +382,7 @@ public sealed class OriginPublisher
     internal void NotifyRejected(SharedReading reading) => Rejected?.Invoke(reading);
 }
 
-[EventPublisher]
+[EventPublisher<UnmarkedManager>]
 public sealed class UnownedPublisher
 {
     public event Action<UnexposedModel>? Unused;

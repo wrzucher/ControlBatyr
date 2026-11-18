@@ -20,7 +20,7 @@ internal sealed record Connection(Type Publisher, EventInfo Event, MethodInfo Me
         var name = (string)attribute.ConstructorArguments[0].Value!;
         var item = publisher.GetEvent(name);
         var parameters = method.GetParameters();
-        if (!publisher.HasAttribute<EventPublisherAttribute>() || item?.AddMethod?.IsStatic != false
+        if (!publisher.IsPublisher() || item?.AddMethod?.IsStatic != false
             || !method.IsStatic || method.ContainsGenericParameters || !method.ReturnType.IsType("System.Threading.Tasks.Task")
             || parameters.Length != 2 || !parameters[0].ParameterType.HasAttribute<ManagerAttribute>()
             || parameters.Any(parameter => parameter.ParameterType.IsByRef)

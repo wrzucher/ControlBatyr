@@ -154,7 +154,6 @@ public sealed class Gateway
 {
     private readonly Feed feed;
 
-    // A public manager whose dependencies are internal is wired through an internal constructor.
     internal Gateway(Feed feed)
     {
         this.feed = feed;
@@ -206,7 +205,7 @@ public enum ReadingState
 public sealed record ReadingRecordedEventArgs(Snapshot Reading);
 public sealed record ReadingDetails(Snapshot? Parent);
 
-[EventPublisher]
+[EventPublisher<Gateway>]
 public sealed class Feed
 {
     /// <summary>A reading became available.</summary>

@@ -134,7 +134,7 @@ public sealed class RulesTests
         public TwoConstructors(Storage storage, int version) { }
     }
 
-    [EventPublisher]
+    [EventPublisher<UndocumentedApi>]
     public sealed class BroadFeed
     {
         public void Generic<T>(T payload) { }
@@ -153,7 +153,7 @@ public sealed class RulesTests
         /// <summary> </summary>
         public void Empty() { }
     }
-    [EventPublisher]
+    [EventPublisher<UndocumentedApi>]
     public sealed class UndocumentedFeed
     {
         public event Action<int> Missing { add { } remove { } }

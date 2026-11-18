@@ -24,7 +24,7 @@ internal static class Rules
         foreach (var type in types.Distinct())
         {
             if (Role<PersistenceAttribute>(type)) Persistence(type);
-            if (Role<EventPublisherAttribute>(type)) Publisher(type);
+            if (type.IsPublisher()) Publisher(type);
             if (Role<ObjectModelAttribute>(type)) Immutable(type);
         }
         foreach (var requirement in RequirementLinks.Find(types))

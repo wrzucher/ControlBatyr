@@ -28,14 +28,16 @@ internal sealed class AssemblyReader
             .SelectMany(assembly => assembly.GetTypes().OrderBy(type => type.MetadataToken))
             .Where(type => !Excluded(type)).ToArray();
         requirements = RequirementLinks.Find(types).ToArray();
-        suppliedPublishers = types.Where(type => type.HasAttribute<EventPublisherAttribute>()).ToHashSet();
+        suppliedPublishers = types.Where(type => type.IsPublisher()).ToHashSet();
         domains = types.Where(type => type.HasAttribute<ManagerAttribute>()).Select(manager =>
         {
             models.Clear();
             DiscoverMethods(manager);
-            var publishers = manager.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).SelectMany(constructor => constructor.GetParameters())
-                .Select(parameter => parameter.ParameterType)
-                .Where(type => type.HasAttribute<EventPublisherAttribute>()).Distinct().ToArray();
+            var publishers = types.Where(type => type.PublisherManagers().Contains(manager)).ToArray();
+            if (publishers.FirstOrDefault(type => type.PublisherManagers().Count() != 1) is { } shared)
+            {
+                throw new InvalidOperationException($"Event publisher {shared.FullName} must have exactly one [EventPublisher<TManager>] domain in the supplied assemblies.");
+            }
             foreach (var parameter in publishers.SelectMany(EventsOf).SelectMany(EventParameters))
             {
                 Discover(parameter.ParameterType);
@@ -165,7 +167,7 @@ internal sealed class AssemblyReader
                 {
                     if (recordManagers.Length != 1 || domains.Count(domain => domain.RecordEvents.Contains(publisher)) != 1)
                     {
-                        throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises {publisher.Name}, which must be an [Event<TManager>] type of exactly one domain in the supplied assemblies; an [EventPublisher] requires an event name.");
+                        throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises {publisher.Name}, which must be an [Event<TManager>] type of exactly one domain in the supplied assemblies; an [EventPublisher<TManager>] requires an event name.");
                     }
                     return Id(publisher);
                 }
@@ -182,7 +184,7 @@ internal sealed class AssemblyReader
                 if (!suppliedPublishers.Contains(publisher) || item?.AddMethod?.IsStatic != false
                     || domains.Count(domain => domain.Publishers.Contains(publisher)) != 1)
                 {
-                    throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises {publisher.Name}.{name}, which must be a public instance event on an [EventPublisher] with one publisher domain in the supplied assemblies.");
+                    throw new InvalidOperationException($"Operation {method.DeclaringType?.FullName}.{method.Name} raises {publisher.Name}.{name}, which must be a public instance event on an [EventPublisher<TManager>] with one publisher domain in the supplied assemblies.");
                 }
                 return Id(item);
             }).Distinct()];

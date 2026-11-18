@@ -4,7 +4,7 @@ using Game.Model;
 namespace Game.Core;
 
 /// <summary>Announces changes to player bets after they have been recorded.</summary>
-[EventPublisher]
+[EventPublisher<GameManager>]
 public sealed class GameEventPublisher
 {
     /// <summary>The player's bet has been placed.</summary>

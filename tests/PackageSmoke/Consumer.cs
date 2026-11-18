@@ -62,7 +62,7 @@ public static class TicketRequirements
 
 
 /// <summary>Announces issued tickets.</summary>
-[EventPublisher]
+[EventPublisher<TicketManager>]
 public sealed class TicketPublisher
 {
     /// <summary>A ticket has been issued.</summary>
